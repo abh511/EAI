@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+backend/venv/
+backend/.env
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+
+# Node
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+
+# ML
+*.h5
+*.pkl
+*.joblib
+backend/app/ml/saved_models/
+
+# Misc
+.DS_Store
+*.log
+*.tmp
+.idea/
+.vscode/
+venv/
+__pycache__/
+*.pyc
+.env
+node_modules/
+.idea/
+.vscode/
