@@ -63,28 +63,6 @@ export default function SiteAnalyzerPage() {
 
   return (
     <Layout title="Site Suitability Analyzer" subtitle={`${location}, ${city}`}>
-      {/* Tips/Suggestions Box */}
-      <div className="card mb-6" style={{ 
-        background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(5, 150, 105, 0.05) 100%)',
-        borderLeft: '4px solid #10b981'
-      }}>
-        <div className="flex items-start gap-4">
-          <div className="text-3xl">💡</div>
-          <div className="flex-1">
-            <h3 className="text-lg font-bold mb-2" style={{ color: '#111827' }}>
-              How to Use Site Analyzer
-            </h3>
-            <ul className="text-sm space-y-1" style={{ color: '#4b5563' }}>
-              <li>• Select construction type based on your project (hospital, gym, temple, market, etc.)</li>
-              <li>• System analyzes air quality, noise, water quality, traffic, and other environmental factors</li>
-              <li>• Get suitability score (0-100) and specific violations if any</li>
-              <li>• View recommendations and alternative locations if current site is unsuitable</li>
-              <li>• Maharashtra-specific: Includes street food zones, temples, sports complexes popular in Pune/Mumbai</li>
-            </ul>
-          </div>
-        </div>
-      </div>
-
       {/* Construction Type Selection */}
       <div className="card mb-6">
         <h3 className="text-lg font-bold mb-2" style={{ color: '#111827' }}>
