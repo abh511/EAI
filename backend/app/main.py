@@ -7,7 +7,7 @@ from contextlib import asynccontextmanager
 from loguru import logger
 
 from app.core.config import settings
-from app.api.routes import auth, dashboard, alerts, forecast, locations, grievance, simulation, site_analysis, ml_predictions
+from app.api.routes import auth, dashboard, alerts, forecast, locations, grievance, simulation, site_analysis, ml_predictions, image_simulator
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -44,6 +44,7 @@ app.include_router(grievance.router,     prefix="/api/grievance",     tags=["Gri
 app.include_router(simulation.router,    prefix="/api/simulation",    tags=["Simulation"])
 app.include_router(site_analysis.router, prefix="/api/site-analysis", tags=["Site Analysis"])
 app.include_router(ml_predictions.router, prefix="/api/ml",           tags=["Machine Learning"])
+app.include_router(image_simulator.router, prefix="/api/image-simulator", tags=["Image Simulator"])
 
 @app.get("/", tags=["Health"])
 async def root():
