@@ -1,219 +1,219 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authAPI } from '../services/api';
+import useAppStore from '../store/useAppStore';
 import toast from 'react-hot-toast';
-import { Shield, Mail, Lock, User, Leaf } from 'lucide-react';
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const [isLogin, setIsLogin] = useState(true);
+  const { setUser } = useAppStore();
+  const [isSignUp, setIsSignUp] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-    full_name: '',
-  });
+  
+  const [signInData, setSignInData] = useState({ email: '', password: '' });
+  const [signUpData, setSignUpData] = useState({ name: '', email: '', password: '' });
 
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
-
-  const handleSubmit = async (e) => {
+  const handleSignIn = async (e) => {
     e.preventDefault();
     setLoading(true);
-
     try {
-      if (isLogin) {
-        const response = await authAPI.login(formData.email, formData.password);
-        const { access_token, user_id, email, full_name } = response.data;
-        
-        localStorage.setItem('ew_token', access_token);
-        localStorage.setItem('ew_user_id', user_id);
-        localStorage.setItem('ew_email', email);
-        if (full_name) localStorage.setItem('ew_full_name', full_name);
-        
-        toast.success('Welcome back! 🎉');
-        navigate('/select-city');
-      } else {
-        const response = await authAPI.register(formData.email, formData.password, formData.full_name);
-        const { access_token, user_id, email, full_name } = response.data;
-        
-        localStorage.setItem('ew_token', access_token);
-        localStorage.setItem('ew_user_id', user_id);
-        localStorage.setItem('ew_email', email);
-        if (full_name) localStorage.setItem('ew_full_name', full_name);
-        
-        toast.success('Account created successfully! 🎉');
-        navigate('/select-city');
-      }
+      const response = await authAPI.login(signInData.email, signInData.password);
+      setUser(response.data.user);
+      toast.success('Welcome back!');
+      navigate('/select-city');
     } catch (error) {
-      toast.error(error.message || 'Authentication failed');
+      toast.error(error.message || 'Login failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSignUp = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      await authAPI.register(signUpData.name, signUpData.email, signUpData.password);
+      toast.success('Account created! Please sign in.');
+      setIsSignUp(false);
+      setSignUpData({ name: '', email: '', password: '' });
+    } catch (error) {
+      toast.error(error.message || 'Registration failed');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-brand-900 via-gray-900 to-gray-950 flex items-center justify-center p-4">
-      {/* Animated background elements */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-20 left-10 w-72 h-72 bg-brand-500/10 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute bottom-20 right-10 w-96 h-96 bg-pillar-air/10 rounded-full blur-3xl animate-pulse delay-1000"></div>
-      </div>
-
-      <div className="relative w-full max-w-md">
-        {/* Logo & Header */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-brand-600 rounded-2xl mb-4 shadow-lg shadow-brand-500/50">
-            <Leaf className="w-8 h-8 text-white" />
-          </div>
-          <h1 className="text-4xl font-bold text-white mb-2">EnviroWatch AI</h1>
-          <p className="text-gray-400">Environmental Risk Detection for Indian Cities</p>
-        </div>
-
-        {/* Auth Card */}
-        <div className="card-glass">
-          {/* Toggle Tabs */}
-          <div className="flex gap-2 mb-6 p-1 bg-gray-800/50 rounded-lg">
-            <button
-              onClick={() => setIsLogin(true)}
-              className={`flex-1 py-2 px-4 rounded-md font-medium transition-all ${
-                isLogin
-                  ? 'bg-brand-600 text-white shadow-lg'
-                  : 'text-gray-400 hover:text-white'
-              }`}
-            >
-              Login
-            </button>
-            <button
-              onClick={() => setIsLogin(false)}
-              className={`flex-1 py-2 px-4 rounded-md font-medium transition-all ${
-                !isLogin
-                  ? 'bg-brand-600 text-white shadow-lg'
-                  : 'text-gray-400 hover:text-white'
-              }`}
-            >
-              Register
-            </button>
-          </div>
-
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {!isLogin && (
-              <div>
-                <label className="label">
-                  <User className="w-4 h-4 inline mr-1" />
-                  Full Name
-                </label>
-                <input
-                  type="text"
-                  name="full_name"
-                  value={formData.full_name}
-                  onChange={handleChange}
-                  className="input"
-                  placeholder="John Doe"
-                  required={!isLogin}
-                />
-              </div>
-            )}
-
-            <div>
-              <label className="label">
-                <Mail className="w-4 h-4 inline mr-1" />
-                Email Address
-              </label>
-              <input
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                className="input"
-                placeholder="you@example.com"
-                required
-              />
+    <div className="min-h-screen flex items-center justify-center" style={{ background: '#f6f5f7' }}>
+      <div 
+        className={`relative overflow-hidden bg-white rounded-lg shadow-lg transition-all duration-700 ${
+          isSignUp ? 'right-panel-active' : ''
+        }`}
+        style={{
+          width: '768px',
+          maxWidth: '100%',
+          minHeight: '480px',
+        }}
+      >
+        {/* Sign Up Form */}
+        <div 
+          className="absolute top-0 h-full transition-all duration-700 ease-in-out"
+          style={{
+            left: 0,
+            width: '50%',
+            opacity: isSignUp ? 1 : 0,
+            zIndex: isSignUp ? 5 : 1,
+            transform: isSignUp ? 'translateX(100%)' : 'translateX(0)',
+          }}
+        >
+          <form onSubmit={handleSignUp} className="bg-white flex items-center justify-center flex-col px-12 h-full text-center">
+            <h1 className="font-bold text-2xl mb-4">Create Account</h1>
+            <div className="flex gap-2 my-5">
+              <a href="#" className="border border-gray-300 rounded-full inline-flex justify-center items-center w-10 h-10 hover:border-[#FF4B2B] transition">
+                <i className="fab fa-facebook-f"></i>
+              </a>
+              <a href="#" className="border border-gray-300 rounded-full inline-flex justify-center items-center w-10 h-10 hover:border-[#FF4B2B] transition">
+                <i className="fab fa-google-plus-g"></i>
+              </a>
+              <a href="#" className="border border-gray-300 rounded-full inline-flex justify-center items-center w-10 h-10 hover:border-[#FF4B2B] transition">
+                <i className="fab fa-linkedin-in"></i>
+              </a>
             </div>
-
-            <div>
-              <label className="label">
-                <Lock className="w-4 h-4 inline mr-1" />
-                Password
-              </label>
-              <input
-                type="password"
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                className="input"
-                placeholder="••••••••"
-                required
-                minLength={6}
-              />
-              {!isLogin && (
-                <p className="text-xs text-gray-500 mt-1">Minimum 6 characters</p>
-              )}
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="btn-primary w-full py-3 text-base font-semibold"
-            >
-              {loading ? (
-                <span className="flex items-center justify-center gap-2">
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                  {isLogin ? 'Logging in...' : 'Creating account...'}
-                </span>
-              ) : (
-                <span className="flex items-center justify-center gap-2">
-                  <Shield className="w-5 h-5" />
-                  {isLogin ? 'Login' : 'Create Account'}
-                </span>
-              )}
+            <span className="text-xs mb-4">or use your email for registration</span>
+            <input
+              type="text"
+              placeholder="Name"
+              value={signUpData.name}
+              onChange={(e) => setSignUpData({ ...signUpData, name: e.target.value })}
+              className="input"
+              required
+            />
+            <input
+              type="email"
+              placeholder="Email"
+              value={signUpData.email}
+              onChange={(e) => setSignUpData({ ...signUpData, email: e.target.value })}
+              className="input"
+              required
+            />
+            <input
+              type="password"
+              placeholder="Password"
+              value={signUpData.password}
+              onChange={(e) => setSignUpData({ ...signUpData, password: e.target.value })}
+              className="input"
+              required
+            />
+            <button type="submit" disabled={loading} className="btn-primary mt-4">
+              {loading ? 'Signing Up...' : 'Sign Up'}
             </button>
           </form>
-
-          {/* Footer */}
-          <div className="mt-6 pt-6 border-t border-gray-700/50 text-center text-sm text-gray-400">
-            {isLogin ? (
-              <p>
-                Don't have an account?{' '}
-                <button
-                  onClick={() => setIsLogin(false)}
-                  className="text-brand-400 hover:text-brand-300 font-medium"
-                >
-                  Register here
-                </button>
-              </p>
-            ) : (
-              <p>
-                Already have an account?{' '}
-                <button
-                  onClick={() => setIsLogin(true)}
-                  className="text-brand-400 hover:text-brand-300 font-medium"
-                >
-                  Login here
-                </button>
-              </p>
-            )}
-          </div>
         </div>
 
-        {/* Features */}
-        <div className="mt-8 grid grid-cols-3 gap-4 text-center">
-          <div className="text-xs">
-            <div className="text-2xl mb-1">🌍</div>
-            <div className="text-gray-400">7 Pillars</div>
-          </div>
-          <div className="text-xs">
-            <div className="text-2xl mb-1">🤖</div>
-            <div className="text-gray-400">AI Powered</div>
-          </div>
-          <div className="text-xs">
-            <div className="text-2xl mb-1">⚡</div>
-            <div className="text-gray-400">Real-time</div>
+        {/* Sign In Form */}
+        <div 
+          className="absolute top-0 h-full transition-all duration-700 ease-in-out"
+          style={{
+            left: 0,
+            width: '50%',
+            zIndex: 2,
+            transform: isSignUp ? 'translateX(100%)' : 'translateX(0)',
+          }}
+        >
+          <form onSubmit={handleSignIn} className="bg-white flex items-center justify-center flex-col px-12 h-full text-center">
+            <h1 className="font-bold text-2xl mb-4">Sign in</h1>
+            <div className="flex gap-2 my-5">
+              <a href="#" className="border border-gray-300 rounded-full inline-flex justify-center items-center w-10 h-10 hover:border-[#FF4B2B] transition">
+                <i className="fab fa-facebook-f"></i>
+              </a>
+              <a href="#" className="border border-gray-300 rounded-full inline-flex justify-center items-center w-10 h-10 hover:border-[#FF4B2B] transition">
+                <i className="fab fa-google-plus-g"></i>
+              </a>
+              <a href="#" className="border border-gray-300 rounded-full inline-flex justify-center items-center w-10 h-10 hover:border-[#FF4B2B] transition">
+                <i className="fab fa-linkedin-in"></i>
+              </a>
+            </div>
+            <span className="text-xs mb-4">or use your account</span>
+            <input
+              type="email"
+              placeholder="Email"
+              value={signInData.email}
+              onChange={(e) => setSignInData({ ...signInData, email: e.target.value })}
+              className="input"
+              required
+            />
+            <input
+              type="password"
+              placeholder="Password"
+              value={signInData.password}
+              onChange={(e) => setSignInData({ ...signInData, password: e.target.value })}
+              className="input"
+              required
+            />
+            <a href="#" className="text-sm text-gray-700 my-4 hover:text-[#FF4B2B] transition">Forgot your password?</a>
+            <button type="submit" disabled={loading} className="btn-primary">
+              {loading ? 'Signing In...' : 'Sign In'}
+            </button>
+          </form>
+        </div>
+
+        {/* Overlay Container */}
+        <div 
+          className="absolute top-0 h-full overflow-hidden transition-transform duration-700 ease-in-out"
+          style={{
+            left: '50%',
+            width: '50%',
+            zIndex: 100,
+            transform: isSignUp ? 'translateX(-100%)' : 'translateX(0)',
+          }}
+        >
+          <div 
+            className="relative h-full w-[200%] transition-transform duration-700 ease-in-out text-white"
+            style={{
+              background: 'linear-gradient(to right, #FF4B2B, #FF416C)',
+              left: '-100%',
+              transform: isSignUp ? 'translateX(50%)' : 'translateX(0)',
+            }}
+          >
+            {/* Overlay Left */}
+            <div 
+              className="absolute flex items-center justify-center flex-col px-10 text-center top-0 h-full w-1/2 transition-transform duration-700 ease-in-out"
+              style={{
+                transform: isSignUp ? 'translateX(0)' : 'translateX(-20%)',
+              }}
+            >
+              <h1 className="font-bold text-3xl mb-4">Welcome Back!</h1>
+              <p className="text-sm leading-5 tracking-wide my-5">To keep connected with us please login with your personal info</p>
+              <button 
+                onClick={() => setIsSignUp(false)}
+                className="bg-transparent border-2 border-white rounded-full text-white text-xs font-bold py-3 px-11 uppercase tracking-wider transition hover:bg-white hover:text-[#FF4B2B]"
+              >
+                Sign In
+              </button>
+            </div>
+
+            {/* Overlay Right */}
+            <div 
+              className="absolute flex items-center justify-center flex-col px-10 text-center top-0 h-full w-1/2 right-0 transition-transform duration-700 ease-in-out"
+              style={{
+                transform: isSignUp ? 'translateX(20%)' : 'translateX(0)',
+              }}
+            >
+              <h1 className="font-bold text-3xl mb-4">Hello, Friend!</h1>
+              <p className="text-sm leading-5 tracking-wide my-5">Enter your personal details and start journey with us</p>
+              <button 
+                onClick={() => setIsSignUp(true)}
+                className="bg-transparent border-2 border-white rounded-full text-white text-xs font-bold py-3 px-11 uppercase tracking-wider transition hover:bg-white hover:text-[#FF4B2B]"
+              >
+                Sign Up
+              </button>
+            </div>
           </div>
         </div>
       </div>
+
+      {/* Font Awesome CDN */}
+      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.14.0/css/all.min.css" />
     </div>
   );
 }

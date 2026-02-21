@@ -1,0 +1,90 @@
+{
+  "accuracy": 0.9975,
+  "cv_accuracy_mean": 0.9970000000000001,
+  "cv_accuracy_std": 0.0007288689868556966,
+  "confusion_matrix": [
+    [
+      71,
+      1,
+      0,
+      0
+    ],
+    [
+      0,
+      1753,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      171,
+      0
+    ],
+    [
+      1,
+      1,
+      2,
+      0
+    ]
+  ],
+  "classification_report": {
+    "Low": {
+      "precision": 0.9861111111111112,
+      "recall": 0.9861111111111112,
+      "f1-score": 0.9861111111111112,
+      "support": 72.0
+    },
+    "Medium": {
+      "precision": 0.9988603988603989,
+      "recall": 1.0,
+      "f1-score": 0.999429874572406,
+      "support": 1753.0
+    },
+    "High": {
+      "precision": 0.9884393063583815,
+      "recall": 1.0,
+      "f1-score": 0.9941860465116279,
+      "support": 171.0
+    },
+    "Critical": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1-score": 0.0,
+      "support": 4.0
+    },
+    "accuracy": 0.9975,
+    "macro avg": {
+      "precision": 0.7433527040824729,
+      "recall": 0.7465277777777778,
+      "f1-score": 0.7449317580487862,
+      "support": 2000.0
+    },
+    "weighted avg": {
+      "precision": 0.9955127002947812,
+      "recall": 0.9975,
+      "f1-score": 0.996503192039458,
+      "support": 2000.0
+    }
+  },
+  "feature_importance": {
+    "pm2_5_ug_m3": 0.2986307328308921,
+    "pm10_ug_m3": 0.14842685148324652,
+    "no2_ug_m3": 0.10108800229895624,
+    "noise_day_dba": 0.08993837225518629,
+    "so2_ug_m3": 0.06859174342145472,
+    "nox_ug_m3": 0.06666273671924884,
+    "sox_ug_m3": 0.06072917740432203,
+    "gw_nitrate_mg_l": 0.035485600710916894,
+    "green_cover_pct": 0.028478667004980238,
+    "water_bod_mg_l": 0.025910527450777134,
+    "gw_tds_mg_l": 0.02158607523197488,
+    "water_quality_index": 0.018561057204142094,
+    "wind_speed_kmh": 0.013088313797962664,
+    "uhi_intensity": 0.01145124738168499,
+    "water_tds_mg_l": 0.01137089480425442
+  },
+  "n_samples_train": 8000,
+  "n_samples_test": 2000,
+  "n_features": 15
+}

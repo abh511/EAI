@@ -7,7 +7,7 @@ from contextlib import asynccontextmanager
 from loguru import logger
 
 from app.core.config import settings
-from app.api.routes import auth, dashboard, alerts, forecast, locations, grievance
+from app.api.routes import auth, dashboard, alerts, forecast, locations, grievance, simulation, site_analysis, ml_predictions
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -35,12 +35,15 @@ app.add_middleware(
 )
 
 # ── Routers ───────────────────────────────────────────────────────────────────
-app.include_router(auth.router,       prefix="/api/auth",       tags=["Auth"])
-app.include_router(locations.router,  prefix="/api/locations",  tags=["Locations"])
-app.include_router(dashboard.router,  prefix="/api/dashboard",  tags=["Dashboard"])
-app.include_router(alerts.router,     prefix="/api/alerts",     tags=["Alerts"])
-app.include_router(forecast.router,   prefix="/api/forecast",   tags=["Forecast"])
-app.include_router(grievance.router,  prefix="/api/grievance",  tags=["Grievance"])
+app.include_router(auth.router,          prefix="/api/auth",          tags=["Auth"])
+app.include_router(locations.router,     prefix="/api/locations",     tags=["Locations"])
+app.include_router(dashboard.router,     prefix="/api/dashboard",     tags=["Dashboard"])
+app.include_router(alerts.router,        prefix="/api/alerts",        tags=["Alerts"])
+app.include_router(forecast.router,      prefix="/api/forecast",      tags=["Forecast"])
+app.include_router(grievance.router,     prefix="/api/grievance",     tags=["Grievance"])
+app.include_router(simulation.router,    prefix="/api/simulation",    tags=["Simulation"])
+app.include_router(site_analysis.router, prefix="/api/site-analysis", tags=["Site Analysis"])
+app.include_router(ml_predictions.router, prefix="/api/ml",           tags=["Machine Learning"])
 
 @app.get("/", tags=["Health"])
 async def root():

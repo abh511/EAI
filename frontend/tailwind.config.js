@@ -37,6 +37,12 @@ export default {
         sans: ['Inter', 'system-ui', 'sans-serif'],
         mono: ['JetBrains Mono', 'monospace'],
       },
+      textColor: {
+        // Override default gray colors to be darker
+        'gray-300': '#2d3748',
+        'gray-400': '#1a1a1a',
+        'gray-500': '#1a1a1a',
+      },
     },
   },
   plugins: [],

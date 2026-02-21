@@ -12,6 +12,10 @@ backend/.env
 frontend/node_modules/
 frontend/dist/
 frontend/.env
+THAC/frontend/node_modules/
+THAC/backend/node_modules/
+THAC/**/node_modules/
+node_modules/
 
 # ML
 *.h5

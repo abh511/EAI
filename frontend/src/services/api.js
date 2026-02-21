@@ -39,6 +39,7 @@ export const dashboardAPI = {
   getSummary:  (city, location) => api.get(`/api/dashboard/summary?city=${city}&location=${location}`),
   getPillars:  (city, location) => api.get(`/api/dashboard/pillars?city=${city}&location=${location}`),
   getCityOverview: (city)       => api.get(`/api/dashboard/city-overview?city=${city}`),
+  getAIInsights: (city, location) => api.get(`/api/dashboard/ai-insights?city=${city}&location=${location}`),
 }
 
 // ── Alerts ───────────────────────────────────────────────────────────────────

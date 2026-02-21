@@ -66,50 +66,55 @@ export default function AlertsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
+      <div className="min-h-screen animated-gradient flex items-center justify-center">
         <div className="text-center">
-          <Loader2 className="w-12 h-12 text-brand-500 animate-spin mx-auto mb-4" />
-          <p className="text-gray-400">Loading alerts...</p>
+          <Loader2 className="w-12 h-12 text-brand-400 animate-spin mx-auto mb-4 neon-glow" />
+          <p className="text-gray-300">Loading alerts...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-950">
+    <div className="min-h-screen animated-gradient">
+      {/* Floating Particles */}
+      <div className="particle particle-1"></div>
+      <div className="particle particle-2"></div>
+      <div className="particle particle-3"></div>
+      
       {/* Header */}
-      <div className="bg-gray-900 border-b border-gray-800 px-6 py-4">
+      <div className="glass-card border-b border-white/10 px-6 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <button onClick={() => navigate('/dashboard')} className="btn-ghost">
+            <button onClick={() => navigate('/dashboard')} className="btn-gradient">
               <ArrowLeft className="w-4 h-4" />
               Back
             </button>
             <div>
-              <h1 className="text-xl font-bold text-white">Active Alerts</h1>
-              <p className="text-sm text-gray-400">{location}, {city}</p>
+              <h1 className="text-2xl font-bold gradient-text neon-glow">Active Alerts</h1>
+              <p className="text-sm text-gray-300">{location}, {city}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-gray-400 text-sm">{filteredAlerts.length} alerts</span>
+            <span className="text-gray-300 text-sm">{filteredAlerts.length} alerts</span>
           </div>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-6 py-8">
         {/* Filter Bar */}
-        <div className="card mb-6">
+        <div className="glass-card card-hover mb-6">
           <div className="flex items-center gap-3 flex-wrap">
-            <Filter className="w-5 h-5 text-gray-400" />
-            <span className="text-gray-400 text-sm font-medium">Filter by severity:</span>
+            <Filter className="w-5 h-5 text-gray-300" />
+            <span className="text-gray-300 text-sm font-medium">Filter by severity:</span>
             {['all', 'critical', 'high', 'medium', 'low'].map((sev) => (
               <button
                 key={sev}
                 onClick={() => setFilter(sev)}
                 className={`px-3 py-1 rounded-lg text-sm font-medium transition-all ${
                   filter === sev
-                    ? 'bg-brand-600 text-white'
-                    : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                    ? 'btn-gradient neon-glow'
+                    : 'glass-card text-gray-300 hover:border-brand-400'
                 }`}
               >
                 {sev.charAt(0).toUpperCase() + sev.slice(1)}
@@ -120,18 +125,18 @@ export default function AlertsPage() {
 
         {/* Alerts List */}
         {filteredAlerts.length === 0 ? (
-          <div className="card text-center py-12">
-            <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-white mb-2">No Active Alerts</h3>
-            <p className="text-gray-400">All environmental parameters are within safe limits</p>
+          <div className="glass-card card-hover text-center py-12">
+            <CheckCircle className="w-16 h-16 text-green-400 mx-auto mb-4 floating" />
+            <h3 className="text-xl font-semibold gradient-text mb-2">No Active Alerts</h3>
+            <p className="text-gray-300">All environmental parameters are within safe limits</p>
           </div>
         ) : (
           <div className="space-y-4">
             {filteredAlerts.map((alert) => (
-              <div key={alert.id} className="card-hover">
+              <div key={alert.id} className="glass-card card-hover">
                 <div className="flex items-start gap-4">
                   {/* Severity Badge */}
-                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${getSeverityColor(alert.severity)}`}>
+                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${getSeverityColor(alert.severity)} ${alert.severity === 'critical' ? 'pulse' : 'floating'}`}>
                     {getSeverityIcon(alert.severity)}
                   </div>
 
@@ -143,37 +148,37 @@ export default function AlertsPage() {
                           <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold uppercase ${getSeverityColor(alert.severity)}`}>
                             {alert.severity}
                           </span>
-                          <span className="text-xs text-gray-500 uppercase">{alert.pillar}</span>
+                          <span className="text-xs text-gray-400 uppercase">{alert.pillar}</span>
                         </div>
                         <h3 className="text-lg font-semibold text-white mb-1">{alert.parameter}</h3>
                       </div>
                       {alert.status === 'open' && (
                         <button
                           onClick={() => handleAcknowledge(alert.id)}
-                          className="btn-secondary text-xs flex-shrink-0"
+                          className="btn-ghost text-xs flex-shrink-0"
                         >
                           Acknowledge
                         </button>
                       )}
                     </div>
 
-                    <p className="text-gray-300 mb-3">{alert.message}</p>
+                    <p className="text-gray-200 mb-3">{alert.message}</p>
 
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                       <div>
-                        <span className="text-gray-500">Observed:</span>
+                        <span className="text-gray-400">Observed:</span>
                         <p className="text-white font-semibold">{alert.observed_value}</p>
                       </div>
                       <div>
-                        <span className="text-gray-500">Threshold:</span>
+                        <span className="text-gray-400">Threshold:</span>
                         <p className="text-white font-semibold">{alert.threshold_value}</p>
                       </div>
                       <div>
-                        <span className="text-gray-500">Authority:</span>
+                        <span className="text-gray-400">Authority:</span>
                         <p className="text-white font-semibold text-xs">{alert.authority}</p>
                       </div>
                       <div>
-                        <span className="text-gray-500">Created:</span>
+                        <span className="text-gray-400">Created:</span>
                         <p className="text-white font-semibold text-xs">
                           {new Date(alert.created_at).toLocaleDateString('en-IN')}
                         </p>
@@ -191,9 +196,9 @@ export default function AlertsPage() {
           {['critical', 'high', 'medium', 'low'].map((sev) => {
             const count = alerts.filter(a => a.severity.toLowerCase() === sev).length;
             return (
-              <div key={sev} className="card text-center">
-                <p className="text-gray-400 text-sm mb-1 capitalize">{sev}</p>
-                <p className={`text-3xl font-bold ${getSeverityColor(sev).split(' ')[1]}`}>{count}</p>
+              <div key={sev} className="glass-card card-hover text-center">
+                <p className="text-gray-300 text-sm mb-1 capitalize">{sev}</p>
+                <p className={`text-4xl font-bold gradient-text neon-glow`}>{count}</p>
               </div>
             );
           })}

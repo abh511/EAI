@@ -59,10 +59,10 @@ export default function ForecastPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
+      <div className="min-h-screen animated-gradient flex items-center justify-center">
         <div className="text-center">
-          <Loader2 className="w-12 h-12 text-brand-500 animate-spin mx-auto mb-4" />
-          <p className="text-gray-400">Loading forecast...</p>
+          <Loader2 className="w-12 h-12 text-brand-400 animate-spin mx-auto mb-4 neon-glow" />
+          <p className="text-gray-300">Loading forecast...</p>
         </div>
       </div>
     );
@@ -72,18 +72,23 @@ export default function ForecastPage() {
   const breachCount = data?.points?.filter(p => p.will_breach).length || 0;
 
   return (
-    <div className="min-h-screen bg-gray-950">
+    <div className="min-h-screen animated-gradient">
+      {/* Floating Particles */}
+      <div className="particle particle-1"></div>
+      <div className="particle particle-2"></div>
+      <div className="particle particle-3"></div>
+      
       {/* Header */}
-      <div className="bg-gray-900 border-b border-gray-800 px-6 py-4">
+      <div className="glass-card border-b border-white/10 px-6 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <button onClick={() => navigate('/dashboard')} className="btn-ghost">
+            <button onClick={() => navigate('/dashboard')} className="btn-gradient">
               <ArrowLeft className="w-4 h-4" />
               Back
             </button>
             <div>
-              <h1 className="text-xl font-bold text-white">48-Hour Forecast</h1>
-              <p className="text-sm text-gray-400">{location}, {city}</p>
+              <h1 className="text-2xl font-bold gradient-text neon-glow">48-Hour Forecast</h1>
+              <p className="text-sm text-gray-300">{location}, {city}</p>
             </div>
           </div>
         </div>
@@ -92,7 +97,7 @@ export default function ForecastPage() {
       <div className="max-w-7xl mx-auto px-6 py-8">
         {/* Pillar Selector */}
         <div className="mb-6">
-          <label className="label mb-2">Select Environmental Pillar</label>
+          <label className="label mb-2 text-gray-300">Select Environmental Pillar</label>
           <div className="flex flex-wrap gap-2">
             {PILLARS.map((pillar) => (
               <button
@@ -100,8 +105,8 @@ export default function ForecastPage() {
                 onClick={() => setSelectedPillar(pillar.value)}
                 className={`px-4 py-2 rounded-lg font-medium transition-all ${
                   selectedPillar === pillar.value
-                    ? 'bg-brand-600 text-white'
-                    : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                    ? 'btn-gradient neon-glow'
+                    : 'glass-card text-gray-300 hover:border-brand-400'
                 }`}
               >
                 {pillar.label}
@@ -112,26 +117,26 @@ export default function ForecastPage() {
 
         {/* Summary Card */}
         {data && (
-          <div className={`card mb-6 ${breachCount > 0 ? 'border-yellow-500/50 bg-yellow-500/5' : 'border-green-500/50 bg-green-500/5'}`}>
+          <div className={`glass-card card-hover mb-6 border-2 ${breachCount > 0 ? 'border-yellow-500/50' : 'border-green-500/50 neon-glow'}`}>
             <div className="flex items-start gap-4">
-              <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${breachCount > 0 ? 'bg-yellow-500/20' : 'bg-green-500/20'}`}>
+              <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${breachCount > 0 ? 'bg-yellow-500/20' : 'bg-green-500/20'} floating`}>
                 {breachCount > 0 ? (
-                  <AlertTriangle className="w-6 h-6 text-yellow-400" />
+                  <AlertTriangle className="w-6 h-6 text-yellow-400 pulse" />
                 ) : (
                   <TrendingUp className="w-6 h-6 text-green-400" />
                 )}
               </div>
               <div className="flex-1">
-                <h3 className="text-lg font-semibold text-white mb-2">{data.parameter} Forecast</h3>
-                <p className="text-gray-300 mb-3">{data.summary}</p>
+                <h3 className="text-lg font-semibold gradient-text mb-2">{data.parameter} Forecast</h3>
+                <p className="text-gray-200 mb-3">{data.summary}</p>
                 <div className="flex flex-wrap gap-4 text-sm">
                   <div>
-                    <span className="text-gray-400">Threshold: </span>
+                    <span className="text-gray-300">Threshold: </span>
                     <span className="text-white font-semibold">{data.threshold} {data.unit}</span>
                   </div>
                   {data.peak_risk_time && (
                     <div>
-                      <span className="text-gray-400">Peak Risk: </span>
+                      <span className="text-gray-300">Peak Risk: </span>
                       <span className="text-white font-semibold">
                         {new Date(data.peak_risk_time).toLocaleString('en-IN', { 
                           dateStyle: 'short', 
@@ -141,7 +146,7 @@ export default function ForecastPage() {
                     </div>
                   )}
                   <div>
-                    <span className="text-gray-400">Breach Hours: </span>
+                    <span className="text-gray-300">Breach Hours: </span>
                     <span className={`font-semibold ${breachCount > 0 ? 'text-yellow-400' : 'text-green-400'}`}>
                       {breachCount} / 48
                     </span>
@@ -153,8 +158,8 @@ export default function ForecastPage() {
         )}
 
         {/* Chart */}
-        <div className="card">
-          <h3 className="text-lg font-semibold text-white mb-4">
+        <div className="glass-card card-hover">
+          <h3 className="text-lg font-semibold gradient-text mb-4">
             {data?.parameter} Levels - Next 48 Hours
           </h3>
           <ResponsiveContainer width="100%" height={400}>
@@ -162,26 +167,27 @@ export default function ForecastPage() {
               <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
               <XAxis 
                 dataKey="time" 
-                stroke="#9ca3af"
-                tick={{ fill: '#9ca3af', fontSize: 12 }}
+                stroke="#d1d5db"
+                tick={{ fill: '#d1d5db', fontSize: 12 }}
                 interval={5}
               />
               <YAxis 
-                stroke="#9ca3af"
-                tick={{ fill: '#9ca3af', fontSize: 12 }}
-                label={{ value: data?.unit || '', angle: -90, position: 'insideLeft', fill: '#9ca3af' }}
+                stroke="#d1d5db"
+                tick={{ fill: '#d1d5db', fontSize: 12 }}
+                label={{ value: data?.unit || '', angle: -90, position: 'insideLeft', fill: '#d1d5db' }}
               />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: '#1f2937',
-                  border: '1px solid #374151',
-                  borderRadius: '8px',
+                  backgroundColor: 'rgba(17, 24, 39, 0.95)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  borderRadius: '12px',
                   color: '#f3f4f6',
+                  backdropFilter: 'blur(10px)',
                 }}
-                labelStyle={{ color: '#9ca3af' }}
+                labelStyle={{ color: '#d1d5db' }}
               />
               <Legend 
-                wrapperStyle={{ color: '#9ca3af' }}
+                wrapperStyle={{ color: '#d1d5db' }}
               />
               <ReferenceLine 
                 y={data?.threshold} 
@@ -192,7 +198,7 @@ export default function ForecastPage() {
               <Line
                 type="monotone"
                 dataKey="value"
-                stroke="#3b82f6"
+                stroke="#667eea"
                 strokeWidth={2}
                 dot={(props) => {
                   const { cx, cy, payload } = props;
@@ -201,8 +207,8 @@ export default function ForecastPage() {
                       cx={cx}
                       cy={cy}
                       r={3}
-                      fill={payload.breach ? '#ef4444' : '#3b82f6'}
-                      stroke={payload.breach ? '#dc2626' : '#2563eb'}
+                      fill={payload.breach ? '#ef4444' : '#667eea'}
+                      stroke={payload.breach ? '#dc2626' : '#764ba2'}
                       strokeWidth={2}
                     />
                   );
@@ -215,30 +221,30 @@ export default function ForecastPage() {
 
         {/* Data Points Summary */}
         <div className="mt-6 grid md:grid-cols-3 gap-4">
-          <div className="card text-center">
-            <p className="text-gray-400 text-sm mb-1">Current Value</p>
-            <p className="text-3xl font-bold text-white">
+          <div className="glass-card card-hover text-center">
+            <p className="text-gray-300 text-sm mb-1">Current Value</p>
+            <p className="text-4xl font-bold gradient-text neon-glow">
               {data?.points?.[0]?.value ? data.points[0].value.toFixed(1) : '0.0'}
             </p>
-            <p className="text-gray-500 text-sm">{data?.unit || ''}</p>
+            <p className="text-gray-400 text-sm">{data?.unit || ''}</p>
           </div>
-          <div className="card text-center">
-            <p className="text-gray-400 text-sm mb-1">Average (48hr)</p>
-            <p className="text-3xl font-bold text-white">
+          <div className="glass-card card-hover text-center">
+            <p className="text-gray-300 text-sm mb-1">Average (48hr)</p>
+            <p className="text-4xl font-bold gradient-text neon-glow">
               {data?.points?.length > 0
                 ? (data.points.reduce((sum, p) => sum + p.value, 0) / data.points.length).toFixed(1)
                 : '0.0'}
             </p>
-            <p className="text-gray-500 text-sm">{data?.unit || ''}</p>
+            <p className="text-gray-400 text-sm">{data?.unit || ''}</p>
           </div>
-          <div className="card text-center">
-            <p className="text-gray-400 text-sm mb-1">Peak Value</p>
-            <p className="text-3xl font-bold text-white">
+          <div className="glass-card card-hover text-center">
+            <p className="text-gray-300 text-sm mb-1">Peak Value</p>
+            <p className="text-4xl font-bold gradient-text neon-glow">
               {data?.points?.length > 0
                 ? Math.max(...data.points.map(p => p.value)).toFixed(1)
                 : '0.0'}
             </p>
-            <p className="text-gray-500 text-sm">{data?.unit || ''}</p>
+            <p className="text-gray-400 text-sm">{data?.unit || ''}</p>
           </div>
         </div>
       </div>
