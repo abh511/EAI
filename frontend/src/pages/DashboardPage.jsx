@@ -319,7 +319,12 @@ export default function DashboardPage() {
           return (
             <div key={pillar.pillar} className="card-single">
               <div>
-                <h1 className="text-4xl font-bold mb-2" style={{ color: '#333' }}>{pillar.value}</h1>
+                <div className="flex items-baseline gap-2 mb-2">
+                  <h1 className="text-4xl font-bold" style={{ color: '#333' }}>{pillar.value}</h1>
+                  {pillar.unit && (
+                    <span className="text-sm font-medium" style={{ color: '#8390A2' }}>{pillar.unit}</span>
+                  )}
+                </div>
                 <span className="text-sm" style={{ color: '#8390A2' }}>{pillar.label}</span>
                 <div className="mt-2">
                   <span 
