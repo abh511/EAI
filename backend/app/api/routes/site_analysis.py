@@ -74,13 +74,65 @@ CONSTRUCTION_REQUIREMENTS = {
         "icon": "🏡",
         "rationale": "Elderly have weakened immunity and pre-existing conditions. Extreme vulnerability to air pollution, heat stress, and noise-induced sleep disturbance."
     },
+    "gym": {
+        "name": "Gym / Fitness Center",
+        "aqi_max": 90, "noise_day_max": 70, "water_quality_min": 65,
+        "traffic_density_max": 75, "green_cover_min": 15,
+        "critical_factors": ["air"],
+        "icon": "💪",
+        "rationale": "People exercise with heavy breathing, inhaling 10-15x more air. Poor air quality during workouts causes respiratory damage and reduces performance."
+    },
+    "street_food": {
+        "name": "Street Food Zone / Food Court",
+        "aqi_max": 110, "noise_day_max": 75, "water_quality_min": 70,
+        "traffic_density_max": 90, "waste_gen_max": 5000,
+        "critical_factors": ["water", "waste"],
+        "icon": "🍛",
+        "rationale": "Food preparation requires clean water. High foot traffic generates waste. Poor sanitation causes foodborne illnesses. Popular in Pune/Mumbai street culture."
+    },
+    "temple": {
+        "name": "Temple / Religious Place",
+        "aqi_max": 95, "noise_day_max": 75, "water_quality_min": 75,
+        "traffic_density_max": 85, "green_cover_min": 25,
+        "critical_factors": ["air", "water", "aesthetics"],
+        "icon": "🛕",
+        "rationale": "Devotees visit for peace and spiritual well-being. Clean environment is essential. Water used for rituals must be pure. Important in Maharashtra culture."
+    },
+    "market": {
+        "name": "Market / Shopping Complex",
+        "aqi_max": 115, "noise_day_max": 75, "water_quality_min": 60,
+        "traffic_density_max": 95, "waste_gen_max": 6000,
+        "critical_factors": ["traffic", "waste"],
+        "icon": "🏪",
+        "rationale": "High footfall generates traffic congestion and waste. Requires good accessibility. Vendors and customers spend hours daily in the area."
+    },
+    "sports_complex": {
+        "name": "Sports Complex / Stadium",
+        "aqi_max": 85, "noise_day_max": 80, "water_quality_min": 65,
+        "traffic_density_max": 70, "green_cover_min": 30, "uhi_intensity_max": 3.5,
+        "critical_factors": ["air", "heat"],
+        "icon": "⚽",
+        "rationale": "Athletes perform intense physical activity outdoors. Poor air quality reduces performance and causes health issues. Heat stress is a major concern."
+    },
+    "parking": {
+        "name": "Multi-Level Parking / Parking Lot",
+        "aqi_max": 150, "noise_day_max": 75, "residential_proximity_min": 0.5,
+        "traffic_density_max": 100,
+        "critical_factors": ["impact_on_others"],
+        "icon": "🅿️",
+        "impact_prediction": {
+            "nox_increase_pct": 25, "pm10_increase_pct": 20, "co_increase_pct": 30,
+            "noise_increase_dba": 10, "affected_radius_km": 0.5,
+        },
+        "rationale": "Vehicle emissions concentrate in parking areas. Must be away from residential zones. Essential for reducing street parking congestion in Pune/Mumbai."
+    },
 }
 
 @router.get("/analyze")
 async def analyze_site(
     city: str = Query(...),
     location: str = Query(...),
-    construction_type: str = Query(..., regex="^(hospital|school|factory|hotel|residential|it_park|old_age_home)$"),
+    construction_type: str = Query(..., regex="^(hospital|school|factory|hotel|residential|it_park|old_age_home|gym|street_food|temple|market|sports_complex|parking)$"),
 ):
     """
     Analyze site suitability for construction
@@ -111,10 +163,10 @@ async def analyze_site(
         if score < 60:
             alternatives = find_better_locations(city, construction_type, location)
         
-        # Predict impact if this is a factory
+        # Predict impact if this is a factory or parking
         impact = None
-        if construction_type == "factory":
-            impact = predict_factory_impact(reading, requirements)
+        if construction_type in ["factory", "parking"]:
+            impact = predict_construction_impact(reading, requirements, construction_type)
         
         # Generate recommendations
         recommendations = generate_recommendations(
@@ -283,6 +335,24 @@ def calculate_suitability(reading: dict, requirements: dict) -> tuple:
             })
         max_possible += 10
     
+    # Waste Generation Check (for food/market areas)
+    if "waste_gen_max" in requirements:
+        waste = reading.get("waste_gen_kg_sqkm_day", 3000)
+        req = requirements["waste_gen_max"]
+        if waste <= req:
+            checks["waste_management"] = {"status": "pass", "value": waste, "limit": req, "message": f"Waste {int(waste)} kg/km²/day ✓"}
+            total_score += 10
+        else:
+            excess = round((waste - req) / req * 100)
+            checks["waste_management"] = {"status": "fail", "value": waste, "limit": req, "message": f"Waste {int(waste)} kg/km²/day (EXCEEDS by {excess}%)"}
+            violations.append({
+                "factor": "High Waste Generation",
+                "severity": "medium",
+                "message": f"Area generates {int(waste)} kg/km²/day waste, {excess}% above manageable limit of {int(req)} kg/km²/day",
+                "impact": "Waste accumulation attracts pests, causes odor, sanitation issues, and health hazards"
+            })
+        max_possible += 10
+    
     # Calculate percentage score
     final_score = (total_score / max_possible * 100) if max_possible > 0 else 0
     
@@ -330,8 +400,8 @@ def get_key_advantage(reading: dict, requirements: dict) -> str:
     
     return "Better overall environmental conditions"
 
-def predict_factory_impact(reading: dict, requirements: dict) -> dict:
-    """Predict environmental impact of building a factory"""
+def predict_construction_impact(reading: dict, requirements: dict, construction_type: str) -> dict:
+    """Predict environmental impact of building a factory or parking"""
     impact_config = requirements.get("impact_prediction", {})
     
     baseline_nox = reading.get("nox_ug_m3", 50)
@@ -349,6 +419,26 @@ def predict_factory_impact(reading: dict, requirements: dict) -> dict:
     affected_area_km2 = 3.14159 * (affected_radius ** 2)
     affected_population = int(population_density_per_km2 * affected_area_km2)
     
+    # Construction-specific mitigations
+    if construction_type == "factory":
+        mitigations = [
+            "Install high-efficiency pollution control equipment (electrostatic precipitators, scrubbers)",
+            "Implement strict emission monitoring with real-time sensors",
+            "Create 500m green buffer zone with dense tree plantation",
+            "Restrict operating hours to daytime only (6 AM - 10 PM)",
+            "Mandate quarterly air quality audits by MPCB",
+        ]
+        health_impact = f"Estimated {int(affected_population * 0.15)} residents (15%) may experience respiratory symptoms"
+    else:  # parking
+        mitigations = [
+            "Install electric vehicle charging stations to encourage EV adoption",
+            "Plant trees around perimeter to absorb vehicle emissions",
+            "Implement proper ventilation systems in covered parking",
+            "Use permeable paving to reduce runoff and heat island effect",
+            "Install air quality sensors and display real-time pollution levels",
+        ]
+        health_impact = f"Estimated {int(affected_population * 0.08)} residents (8%) may experience increased respiratory irritation"
+    
     return {
         "construction_impact": {
             "nox": {"before": round(baseline_nox, 1), "after": round(predicted_nox, 1), "change_pct": impact_config.get("nox_increase_pct", 0)},
@@ -357,14 +447,8 @@ def predict_factory_impact(reading: dict, requirements: dict) -> dict:
         },
         "affected_radius_km": affected_radius,
         "estimated_affected_population": affected_population,
-        "health_impact": f"Estimated {int(affected_population * 0.15)} residents (15%) may experience respiratory symptoms",
-        "mitigation_required": [
-            "Install high-efficiency pollution control equipment (electrostatic precipitators, scrubbers)",
-            "Implement strict emission monitoring with real-time sensors",
-            "Create 500m green buffer zone with dense tree plantation",
-            "Restrict operating hours to daytime only (6 AM - 10 PM)",
-            "Mandate quarterly air quality audits by MPCB",
-        ]
+        "health_impact": health_impact,
+        "mitigation_required": mitigations,
     }
 
 def generate_recommendations(score: float, violations: list, construction_type: str, location: str, reading: dict) -> list:
