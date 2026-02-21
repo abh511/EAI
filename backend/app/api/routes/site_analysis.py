@@ -364,7 +364,7 @@ def find_better_locations(city: str, construction_type: str, exclude: str) -> li
         loc_data = df_city[df_city["location"] == location].sample(1).iloc[0].to_dict()
         score, _, _ = calculate_suitability(loc_data, requirements)
         
-        if score >= 70:  # Only suggest good alternatives
+        if score >= 60:  # Only suggest alternatives better than failing threshold
             alternatives.append({
                 "location": location,
                 "suitability_score": round(score, 1),
