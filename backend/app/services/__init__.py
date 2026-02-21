@@ -145,10 +145,10 @@ def build_pillar_cards(reading: dict) -> list:
          "description": f"SOx: {reading.get('sox_ug_m3',0):.1f} µg/m³"},
 
         {"pillar": "waste",       "label": "Solid Waste",   "icon": "Trash2",
-         "value": reading.get("recycling_pct", 0),   "unit": "% recycled",
-         "status": "good" if reading.get("recycling_pct",0) > 40 else "moderate" if reading.get("recycling_pct",0) > 25 else "unhealthy",
+         "value": max(reading.get("waste_gen_kg_sqkm_day", 250), 150),   "unit": "kg/km²/day",
+         "status": "good" if reading.get("waste_gen_kg_sqkm_day", 250) < 300 else "moderate" if reading.get("waste_gen_kg_sqkm_day", 250) < 500 else "unhealthy",
          "trend": trend(),
-         "description": f"Landfill: {reading.get('waste_landfill_pct',0):.1f}%"},
+         "description": f"Recycling: {reading.get('waste_recycling_pct',0):.1f}%"},
 
         {"pillar": "heat",        "label": "Urban Heat",    "icon": "Thermometer",
          "value": reading.get("ambient_temp_celsius", 0), "unit": "°C",
