@@ -61,7 +61,7 @@ export default function SimulatorPage() {
   };
   
   const chartData = results ? Object.entries(results.results).map(([key, value]) => ({
-    name: key.replace('_ug_m3', '').replace('_', ' ').toUpperCase(),
+    name: key,  // Already formatted as "Air Quality", "Water Quality", etc.
     baseline: value.baseline,
     predicted: value.predicted,
   })) : [];

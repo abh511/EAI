@@ -171,6 +171,52 @@ async def simulate_scenario(
         new_aqi = pm25_to_aqi(simulated["pm2_5_ug_m3"])
         baseline_aqi = int(baseline.get("aqi_us", 150))
         
+        # Calculate pillar-level impacts (7 pillars)
+        pillar_impacts = {
+            "Air Quality": {
+                "baseline": baseline_aqi,
+                "predicted": new_aqi,
+                "change": new_aqi - baseline_aqi,
+                "unit": "AQI"
+            },
+            "Water Quality": {
+                "baseline": round(float(baseline.get("water_quality_index", 50)), 1),
+                "predicted": round(impacts.get("water_quality_index", {}).get("predicted", 50), 1),
+                "change": round(impacts.get("water_quality_index", {}).get("predicted", 50) - float(baseline.get("water_quality_index", 50)), 1),
+                "unit": "WQI"
+            },
+            "Noise Level": {
+                "baseline": round(float(baseline.get("noise_day_dba", 65)), 1),
+                "predicted": round(float(baseline.get("noise_day_dba", 65)), 1),  # Noise not affected by these factors
+                "change": 0,
+                "unit": "dB(A)"
+            },
+            "Industrial Emissions": {
+                "baseline": round(float(baseline.get("nox_ug_m3", 50)), 1),
+                "predicted": round(impacts.get("nox_ug_m3", {}).get("predicted", 50), 1),
+                "change": round(impacts.get("nox_ug_m3", {}).get("predicted", 50) - float(baseline.get("nox_ug_m3", 50)), 1),
+                "unit": "NOx µg/m³"
+            },
+            "Solid Waste": {
+                "baseline": round(float(baseline.get("waste_gen_kg_sqkm_day", 3000)), 0),
+                "predicted": round(impacts.get("waste_gen_kg_sqkm_day", {}).get("predicted", 3000), 0),
+                "change": round(impacts.get("waste_gen_kg_sqkm_day", {}).get("predicted", 3000) - float(baseline.get("waste_gen_kg_sqkm_day", 3000)), 0),
+                "unit": "kg/km²/day"
+            },
+            "Urban Heat": {
+                "baseline": round(float(baseline.get("ambient_temp_celsius", 30)), 1),
+                "predicted": round(float(baseline.get("ambient_temp_celsius", 30)), 1),  # Temperature not directly affected
+                "change": 0,
+                "unit": "°C"
+            },
+            "Groundwater": {
+                "baseline": round(float(baseline.get("gw_tds_mg_l", 500)), 0),
+                "predicted": round(impacts.get("gw_tds_mg_l", {}).get("predicted", 500), 0),
+                "change": round(impacts.get("gw_tds_mg_l", {}).get("predicted", 500) - float(baseline.get("gw_tds_mg_l", 500)), 0),
+                "unit": "TDS mg/L"
+            },
+        }
+        
         return {
             "scenario": {
                 "traffic_change": f"{traffic_change_pct:+}%",
@@ -180,7 +226,8 @@ async def simulate_scenario(
                 "festival_activity": f"{festival_activity_pct:+}%",
                 "green_cover_change": f"{green_cover_change_pct:+}%",
             },
-            "results": impacts,
+            "results": pillar_impacts,
+            "detailed_results": impacts,  # Keep detailed for reference
             "aqi": {
                 "baseline": baseline_aqi,
                 "predicted": new_aqi,
