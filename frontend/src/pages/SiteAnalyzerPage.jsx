@@ -12,6 +12,8 @@ export default function SiteAnalyzerPage() {
   const [selectedType, setSelectedType] = useState('');
   const [analyzing, setAnalyzing] = useState(false);
   const [result, setResult] = useState(null);
+  const [uploadedImage, setUploadedImage] = useState(null);
+  const [isDragging, setIsDragging] = useState(false);
 
   useEffect(() => {
     if (!city || !location) {
@@ -61,6 +63,45 @@ export default function SiteAnalyzerPage() {
     }
   };
 
+  const handleImageUpload = (file) => {
+    if (file && file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setUploadedImage(e.target.result);
+        toast.success('Site image uploaded successfully!');
+      };
+      reader.readAsDataURL(file);
+    } else {
+      toast.error('Please upload a valid image file');
+    }
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files[0];
+    handleImageUpload(file);
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = () => {
+    setIsDragging(false);
+  };
+
+  const handleFileSelect = (e) => {
+    const file = e.target.files[0];
+    handleImageUpload(file);
+  };
+
+  const removeImage = () => {
+    setUploadedImage(null);
+    toast.success('Image removed');
+  };
+
   return (
     <Layout title="Site Suitability Analyzer" subtitle={`${location}, ${city}`}>
       {/* Construction Type Selection */}
@@ -89,6 +130,82 @@ export default function SiteAnalyzerPage() {
             </button>
           ))}
         </div>
+      </div>
+
+      {/* Image Upload Section */}
+      <div className="card mb-6">
+        <h3 className="text-lg font-bold mb-2" style={{ color: '#111827' }}>
+          Upload Site Image (Optional)
+        </h3>
+        <p className="text-sm mb-4" style={{ color: '#6b7280' }}>
+          Add a photo of the site for visual reference
+        </p>
+
+        {!uploadedImage ? (
+          <div
+            onDrop={handleDrop}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            className="border-2 border-dashed rounded-xl p-8 text-center transition-all cursor-pointer"
+            style={{
+              borderColor: isDragging ? '#10b981' : '#e5e7eb',
+              backgroundColor: isDragging ? 'rgba(16, 185, 129, 0.05)' : '#f9fafb'
+            }}
+          >
+            <input
+              type="file"
+              id="imageUpload"
+              accept="image/*"
+              onChange={handleFileSelect}
+              className="hidden"
+            />
+            <label htmlFor="imageUpload" className="cursor-pointer">
+              <div className="text-5xl mb-4">📸</div>
+              <p className="text-lg font-semibold mb-2" style={{ color: '#111827' }}>
+                {isDragging ? 'Drop image here' : 'Drag & drop site image'}
+              </p>
+              <p className="text-sm mb-4" style={{ color: '#6b7280' }}>
+                or click to browse
+              </p>
+              <button
+                type="button"
+                onClick={() => document.getElementById('imageUpload').click()}
+                className="px-6 py-2 rounded-lg font-semibold transition-all"
+                style={{
+                  backgroundColor: '#10b981',
+                  color: '#ffffff',
+                  border: 'none'
+                }}
+              >
+                Browse Files
+              </button>
+              <p className="text-xs mt-3" style={{ color: '#9ca3af' }}>
+                Supports: JPG, PNG, GIF (Max 5MB)
+              </p>
+            </label>
+          </div>
+        ) : (
+          <div className="relative rounded-xl overflow-hidden" style={{ border: '2px solid #10b981' }}>
+            <img
+              src={uploadedImage}
+              alt="Uploaded site"
+              className="w-full h-64 object-cover"
+            />
+            <button
+              onClick={removeImage}
+              className="absolute top-4 right-4 w-10 h-10 rounded-full flex items-center justify-center transition-all"
+              style={{
+                backgroundColor: 'rgba(220, 38, 38, 0.9)',
+                color: '#ffffff'
+              }}
+            >
+              <i className="fas fa-times"></i>
+            </button>
+            <div className="absolute bottom-0 left-0 right-0 p-4" style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.7), transparent)' }}>
+              <p className="text-white text-sm font-semibold">Site Image Uploaded ✓</p>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Analyze Button */}
