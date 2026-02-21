@@ -13,6 +13,7 @@ const AlertsPage = lazy(() => import('./pages/AlertsPage.jsx'))
 const GrievancePage = lazy(() => import('./pages/GrievancePage.jsx'))
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage.jsx'))
 const SimulatorPage = lazy(() => import('./pages/SimulatorPage.jsx'))
+const ImageSimulatorPage = lazy(() => import('./pages/ImageSimulatorPage.jsx'))
 const SiteAnalyzerPage = lazy(() => import('./pages/SiteAnalyzerPage.jsx'))
 const SettingsPage = lazy(() => import('./pages/SettingsPage.jsx'))
 const ProfilePage = lazy(() => import('./pages/ProfilePage.jsx'))
@@ -61,6 +62,7 @@ export default function App() {
             <Route path="/alerts" element={<ProtectedRoute><AlertsPage /></ProtectedRoute>} />
             <Route path="/grievance" element={<ProtectedRoute><GrievancePage /></ProtectedRoute>} />
             <Route path="/simulator" element={<ProtectedRoute><SimulatorPage /></ProtectedRoute>} />
+            <Route path="/image-simulator" element={<ProtectedRoute><ImageSimulatorPage /></ProtectedRoute>} />
             <Route path="/site-analyzer" element={<ProtectedRoute><SiteAnalyzerPage /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
             <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />

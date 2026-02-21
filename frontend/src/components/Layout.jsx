@@ -52,6 +52,7 @@ export default function Layout({ children, title, subtitle }) {
     { icon: 'fas fa-map-marked-alt', label: 'Map View', path: '/map' },
     { icon: 'fas fa-chart-line', label: 'Forecast', path: '/forecast' },
     { icon: 'fas fa-flask', label: 'Simulator', path: '/simulator' },
+    { icon: 'fas fa-images', label: 'Image Simulator', path: '/image-simulator' },
     { icon: 'fas fa-building', label: 'Site Analyzer', path: '/site-analyzer' },
     { icon: 'fas fa-bell', label: 'Alerts', path: '/alerts' },
     { icon: 'fas fa-comment-alt', label: 'Report Issue', path: '/grievance' },
