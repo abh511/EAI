@@ -90,14 +90,6 @@ CONSTRUCTION_REQUIREMENTS = {
         "icon": "🍛",
         "rationale": "Food preparation requires clean water. High foot traffic generates waste. Poor sanitation causes foodborne illnesses. Popular in Pune/Mumbai street culture."
     },
-    "temple": {
-        "name": "Temple / Religious Place",
-        "aqi_max": 95, "noise_day_max": 75, "water_quality_min": 75,
-        "traffic_density_max": 85, "green_cover_min": 25,
-        "critical_factors": ["air", "water", "aesthetics"],
-        "icon": "🛕",
-        "rationale": "Devotees visit for peace and spiritual well-being. Clean environment is essential. Water used for rituals must be pure. Important in Maharashtra culture."
-    },
     "market": {
         "name": "Market / Shopping Complex",
         "aqi_max": 115, "noise_day_max": 75, "water_quality_min": 60,
@@ -132,7 +124,7 @@ CONSTRUCTION_REQUIREMENTS = {
 async def analyze_site(
     city: str = Query(...),
     location: str = Query(...),
-    construction_type: str = Query(..., regex="^(hospital|school|factory|hotel|residential|it_park|old_age_home|gym|street_food|temple|market|sports_complex|parking)$"),
+    construction_type: str = Query(..., regex="^(hospital|school|factory|hotel|residential|it_park|old_age_home|gym|street_food|market|sports_complex|parking)$"),
 ):
     """
     Analyze site suitability for construction
