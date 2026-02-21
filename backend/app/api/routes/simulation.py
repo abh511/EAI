@@ -172,6 +172,52 @@ async def simulate_scenario(
         baseline_aqi = int(baseline.get("aqi_us", 150))
         
         # Calculate pillar-level impacts (7 pillars)
+        # Each pillar is affected by specific factors only
+        
+        # 1. AIR QUALITY - affected by traffic, industrial, wind, rainfall, festival, green cover
+        baseline_aqi = int(baseline.get("aqi_us", 150))
+        new_aqi = pm25_to_aqi(simulated["pm2_5_ug_m3"])
+        
+        # 2. WATER QUALITY - affected by rainfall, industrial, festival
+        baseline_wqi = float(baseline.get("water_quality_index", 50))
+        wqi_change = 0
+        if "water_quality_index" in impacts:
+            wqi_change = impacts["water_quality_index"]["predicted"] - baseline_wqi
+        predicted_wqi = baseline_wqi + wqi_change
+        
+        # 3. NOISE LEVEL - affected by traffic, industrial, festival
+        baseline_noise = float(baseline.get("noise_day_dba", 65))
+        noise_change = (
+            baseline_noise * (traffic_change_pct / 100) * 0.3 +
+            baseline_noise * (industrial_change_pct / 100) * 0.2 +
+            baseline_noise * (festival_activity_pct / 100) * 0.4
+        )
+        predicted_noise = max(30, baseline_noise + noise_change)
+        
+        # 4. INDUSTRIAL EMISSIONS - affected by industrial activity only
+        baseline_nox = float(baseline.get("nox_ug_m3", 50))
+        predicted_nox = impacts.get("nox_ug_m3", {}).get("predicted", baseline_nox)
+        
+        # 5. SOLID WASTE - affected by festival (increases), rainfall (slight decrease)
+        baseline_waste = float(baseline.get("waste_gen_kg_sqkm_day", 3000))
+        waste_change = (
+            baseline_waste * (festival_activity_pct / 100) * 0.8 +  # Festivals generate massive waste
+            baseline_waste * (rainfall_change_pct / 100) * (-0.05)  # Rain slightly reduces outdoor activities
+        )
+        predicted_waste = max(1000, baseline_waste + waste_change)
+        
+        # 6. URBAN HEAT - affected by green cover (reduces), traffic (increases)
+        baseline_temp = float(baseline.get("ambient_temp_celsius", 30))
+        temp_change = (
+            baseline_temp * (green_cover_change_pct / 100) * (-0.15) +  # More trees = cooler
+            baseline_temp * (traffic_change_pct / 100) * 0.05  # More vehicles = hotter
+        )
+        predicted_temp = max(20, baseline_temp + temp_change)
+        
+        # 7. GROUNDWATER - affected by rainfall (dilutes), industrial (pollutes)
+        baseline_gw = float(baseline.get("gw_tds_mg_l", 500))
+        predicted_gw = impacts.get("gw_tds_mg_l", {}).get("predicted", baseline_gw)
+        
         pillar_impacts = {
             "Air Quality": {
                 "baseline": baseline_aqi,
@@ -180,39 +226,39 @@ async def simulate_scenario(
                 "unit": "AQI"
             },
             "Water Quality": {
-                "baseline": round(float(baseline.get("water_quality_index", 50)), 1),
-                "predicted": round(impacts.get("water_quality_index", {}).get("predicted", 50), 1),
-                "change": round(impacts.get("water_quality_index", {}).get("predicted", 50) - float(baseline.get("water_quality_index", 50)), 1),
+                "baseline": round(baseline_wqi, 1),
+                "predicted": round(predicted_wqi, 1),
+                "change": round(predicted_wqi - baseline_wqi, 1),
                 "unit": "WQI"
             },
             "Noise Level": {
-                "baseline": round(float(baseline.get("noise_day_dba", 65)), 1),
-                "predicted": round(float(baseline.get("noise_day_dba", 65)), 1),  # Noise not affected by these factors
-                "change": 0,
+                "baseline": round(baseline_noise, 1),
+                "predicted": round(predicted_noise, 1),
+                "change": round(predicted_noise - baseline_noise, 1),
                 "unit": "dB(A)"
             },
             "Industrial Emissions": {
-                "baseline": round(float(baseline.get("nox_ug_m3", 50)), 1),
-                "predicted": round(impacts.get("nox_ug_m3", {}).get("predicted", 50), 1),
-                "change": round(impacts.get("nox_ug_m3", {}).get("predicted", 50) - float(baseline.get("nox_ug_m3", 50)), 1),
+                "baseline": round(baseline_nox, 1),
+                "predicted": round(predicted_nox, 1),
+                "change": round(predicted_nox - baseline_nox, 1),
                 "unit": "NOx µg/m³"
             },
             "Solid Waste": {
-                "baseline": round(float(baseline.get("waste_gen_kg_sqkm_day", 3000)), 0),
-                "predicted": round(impacts.get("waste_gen_kg_sqkm_day", {}).get("predicted", 3000), 0),
-                "change": round(impacts.get("waste_gen_kg_sqkm_day", {}).get("predicted", 3000) - float(baseline.get("waste_gen_kg_sqkm_day", 3000)), 0),
+                "baseline": round(baseline_waste, 0),
+                "predicted": round(predicted_waste, 0),
+                "change": round(predicted_waste - baseline_waste, 0),
                 "unit": "kg/km²/day"
             },
             "Urban Heat": {
-                "baseline": round(float(baseline.get("ambient_temp_celsius", 30)), 1),
-                "predicted": round(float(baseline.get("ambient_temp_celsius", 30)), 1),  # Temperature not directly affected
-                "change": 0,
+                "baseline": round(baseline_temp, 1),
+                "predicted": round(predicted_temp, 1),
+                "change": round(predicted_temp - baseline_temp, 1),
                 "unit": "°C"
             },
             "Groundwater": {
-                "baseline": round(float(baseline.get("gw_tds_mg_l", 500)), 0),
-                "predicted": round(impacts.get("gw_tds_mg_l", {}).get("predicted", 500), 0),
-                "change": round(impacts.get("gw_tds_mg_l", {}).get("predicted", 500) - float(baseline.get("gw_tds_mg_l", 500)), 0),
+                "baseline": round(baseline_gw, 0),
+                "predicted": round(predicted_gw, 0),
+                "change": round(predicted_gw - baseline_gw, 0),
                 "unit": "TDS mg/L"
             },
         }
