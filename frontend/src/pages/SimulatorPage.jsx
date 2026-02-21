@@ -14,7 +14,7 @@ export default function SimulatorPage() {
     industrial_change_pct: 0,
     wind_speed_change_pct: 0,
     rainfall_change_pct: 0,
-    temperature_change_pct: 0,
+    festival_activity_pct: 0,
     green_cover_change_pct: 0,
   });
   
@@ -54,7 +54,7 @@ export default function SimulatorPage() {
       industrial_change_pct: 0, 
       wind_speed_change_pct: 0,
       rainfall_change_pct: 0,
-      temperature_change_pct: 0,
+      festival_activity_pct: 0,
       green_cover_change_pct: 0,
     });
     setResults(null);
@@ -79,7 +79,7 @@ export default function SimulatorPage() {
           Scenario Parameters
         </h3>
         <p className="text-sm mb-6" style={{ color: '#6b7280' }}>
-          Adjust the sliders to simulate different environmental scenarios
+          Adjust sliders to simulate environmental scenarios. Test festival impacts (Diwali, Ganesh Chaturthi), monsoon effects on air/water/soil, and policy interventions.
         </p>
 
         <div className="space-y-6">
@@ -213,39 +213,45 @@ export default function SimulatorPage() {
                 WebkitAppearance: 'none'
               }}
             />
+            <p className="text-xs mt-2" style={{ color: '#6b7280' }}>
+              Reduces air pollution, affects water & soil quality
+            </p>
           </div>
 
-          {/* Temperature Slider */}
+          {/* Festival/Holiday Activity Slider */}
           <div>
             <div className="flex items-center justify-between mb-3">
               <label className="text-xl font-bold" style={{ color: '#111827' }}>
-                <i className="fas fa-temperature-high mr-2" style={{ color: '#10b981' }}></i>
-                Temperature
+                <i className="fas fa-calendar-day mr-2" style={{ color: '#10b981' }}></i>
+                Festival/Holiday Activity
               </label>
               <span className="text-2xl font-bold" style={{ 
-                color: scenario.temperature_change_pct > 0 ? '#dc2626' : scenario.temperature_change_pct < 0 ? '#10b981' : '#6b7280' 
+                color: scenario.festival_activity_pct > 0 ? '#dc2626' : scenario.festival_activity_pct < 0 ? '#10b981' : '#6b7280' 
               }}>
-                {scenario.temperature_change_pct > 0 ? '+' : ''}{scenario.temperature_change_pct}%
+                {scenario.festival_activity_pct > 0 ? '+' : ''}{scenario.festival_activity_pct}%
               </span>
             </div>
             <input
               type="range"
-              min="-20"
-              max="30"
-              step="2"
-              value={scenario.temperature_change_pct}
-              onChange={e => setScenario(s => ({ ...s, temperature_change_pct: Number(e.target.value) }))}
+              min="-100"
+              max="300"
+              step="25"
+              value={scenario.festival_activity_pct}
+              onChange={e => setScenario(s => ({ ...s, festival_activity_pct: Number(e.target.value) }))}
               className="slider"
               style={{
                 width: '100%',
                 height: '8px',
                 borderRadius: '4px',
-                background: `linear-gradient(to right, #10b981 0%, #10b981 ${((scenario.temperature_change_pct + 20) / 50) * 100}%, #e5e7eb ${((scenario.temperature_change_pct + 20) / 50) * 100}%, #e5e7eb 100%)`,
+                background: `linear-gradient(to right, #10b981 0%, #10b981 ${((scenario.festival_activity_pct + 100) / 400) * 100}%, #e5e7eb ${((scenario.festival_activity_pct + 100) / 400) * 100}%, #e5e7eb 100%)`,
                 outline: 'none',
                 appearance: 'none',
                 WebkitAppearance: 'none'
               }}
             />
+            <p className="text-xs mt-2" style={{ color: '#6b7280' }}>
+              Diwali, Ganesh Chaturthi, Holi: firecrackers, traffic, waste
+            </p>
           </div>
 
           {/* Green Cover Slider */}

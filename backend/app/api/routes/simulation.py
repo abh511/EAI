@@ -17,7 +17,7 @@ async def simulate_scenario(
     industrial_change_pct: float = Query(0, ge=-50, le=100),
     wind_speed_change_pct: float = Query(0, ge=-50, le=100),
     rainfall_change_pct: float = Query(0, ge=-100, le=200),
-    temperature_change_pct: float = Query(0, ge=-20, le=30),
+    festival_activity_pct: float = Query(0, ge=-100, le=300),
     green_cover_change_pct: float = Query(0, ge=-50, le=100),
 ):
     """
@@ -32,13 +32,13 @@ async def simulate_scenario(
         # Impact coefficients (empirically derived)
         # Positive coefficient = increases pollution
         # Negative coefficient = decreases pollution
-        COEFFICIENTS = {
+        AIR_COEFFICIENTS = {
             "pm2_5_ug_m3": {
                 "traffic": 0.4, 
                 "industrial": 0.3, 
                 "wind": -0.25,
                 "rainfall": -0.35,      # Rain washes out particulates
-                "temperature": 0.15,    # Higher temp increases photochemical reactions
+                "festival": 0.50,       # Festivals: firecrackers, increased traffic, cooking
                 "green_cover": -0.20,   # Trees filter air
             },
             "pm10_ug_m3": {
@@ -46,7 +46,7 @@ async def simulate_scenario(
                 "industrial": 0.35, 
                 "wind": -0.3,
                 "rainfall": -0.40,      # Rain is very effective for larger particles
-                "temperature": 0.10,
+                "festival": 0.60,       # Dust, firecrackers, construction activities
                 "green_cover": -0.18,
             },
             "no2_ug_m3": {
@@ -54,7 +54,7 @@ async def simulate_scenario(
                 "industrial": 0.4, 
                 "wind": -0.2,
                 "rainfall": -0.15,      # Less effective for gases
-                "temperature": 0.25,    # Higher temp increases NOx formation
+                "festival": 0.45,       # Vehicle emissions from increased movement
                 "green_cover": -0.12,
             },
             "nox_ug_m3": {
@@ -62,7 +62,7 @@ async def simulate_scenario(
                 "industrial": 0.7, 
                 "wind": -0.15,
                 "rainfall": -0.10,
-                "temperature": 0.30,    # Temperature strongly affects NOx
+                "festival": 0.35,       # Combustion from celebrations
                 "green_cover": -0.10,
             },
             "sox_ug_m3": {
@@ -70,28 +70,94 @@ async def simulate_scenario(
                 "industrial": 0.8, 
                 "wind": -0.1,
                 "rainfall": -0.25,      # Rain dissolves SO2
-                "temperature": 0.08,
+                "festival": 0.25,       # Burning activities
                 "green_cover": -0.08,
+            },
+        }
+        
+        # Water quality coefficients
+        WATER_COEFFICIENTS = {
+            "water_quality_index": {
+                "rainfall": 0.15,       # Heavy rain can wash pollutants into water bodies
+                "industrial": -0.20,    # Industrial discharge reduces WQI
+                "festival": -0.10,      # Festival waste in water bodies
+            },
+            "water_tds_mg_l": {
+                "rainfall": 0.25,       # Rain increases dissolved solids temporarily
+                "industrial": 0.30,     # Industrial effluents
+                "festival": 0.15,       # Waste runoff
+            },
+            "water_bod_mg_l": {
+                "rainfall": 0.20,       # Organic matter washoff
+                "industrial": 0.35,     # Industrial organic waste
+                "festival": 0.25,       # Food waste, organic materials
+            },
+        }
+        
+        # Soil/Groundwater coefficients
+        SOIL_COEFFICIENTS = {
+            "gw_tds_mg_l": {
+                "rainfall": -0.10,      # Rain dilutes groundwater TDS (long-term)
+                "industrial": 0.25,     # Industrial seepage
+            },
+            "waste_gen_kg_sqkm_day": {
+                "festival": 0.80,       # Massive waste generation during festivals
+                "rainfall": -0.05,      # Slight reduction in outdoor activities
             },
         }
         
         simulated = {}
         impacts = {}
         
-        for param, coefs in COEFFICIENTS.items():
+        # Process AIR quality parameters
+        for param, coefs in AIR_COEFFICIENTS.items():
             base_val = float(baseline.get(param, 0))
             
-            # Calculate impact from each factor
-            traffic_impact = base_val * (traffic_change_pct / 100) * coefs["traffic"]
-            industrial_impact = base_val * (industrial_change_pct / 100) * coefs["industrial"]
-            wind_impact = base_val * (wind_speed_change_pct / 100) * coefs["wind"]
-            rainfall_impact = base_val * (rainfall_change_pct / 100) * coefs["rainfall"]
-            temperature_impact = base_val * (temperature_change_pct / 100) * coefs["temperature"]
-            green_cover_impact = base_val * (green_cover_change_pct / 100) * coefs["green_cover"]
+            traffic_impact = base_val * (traffic_change_pct / 100) * coefs.get("traffic", 0)
+            industrial_impact = base_val * (industrial_change_pct / 100) * coefs.get("industrial", 0)
+            wind_impact = base_val * (wind_speed_change_pct / 100) * coefs.get("wind", 0)
+            rainfall_impact = base_val * (rainfall_change_pct / 100) * coefs.get("rainfall", 0)
+            festival_impact = base_val * (festival_activity_pct / 100) * coefs.get("festival", 0)
+            green_cover_impact = base_val * (green_cover_change_pct / 100) * coefs.get("green_cover", 0)
             
-            # Sum all impacts
             total_impact = (traffic_impact + industrial_impact + wind_impact + 
-                          rainfall_impact + temperature_impact + green_cover_impact)
+                          rainfall_impact + festival_impact + green_cover_impact)
+            
+            new_val = max(0, base_val + total_impact)
+            simulated[param] = round(new_val, 2)
+            impacts[param] = {
+                "baseline": round(base_val, 2),
+                "predicted": round(new_val, 2),
+                "change_pct": round(((new_val - base_val) / base_val * 100) if base_val > 0 else 0, 1),
+            }
+        
+        # Process WATER quality parameters
+        for param, coefs in WATER_COEFFICIENTS.items():
+            base_val = float(baseline.get(param, 0))
+            
+            rainfall_impact = base_val * (rainfall_change_pct / 100) * coefs.get("rainfall", 0)
+            industrial_impact = base_val * (industrial_change_pct / 100) * coefs.get("industrial", 0)
+            festival_impact = base_val * (festival_activity_pct / 100) * coefs.get("festival", 0)
+            
+            total_impact = rainfall_impact + industrial_impact + festival_impact
+            
+            new_val = max(0, base_val + total_impact)
+            simulated[param] = round(new_val, 2)
+            impacts[param] = {
+                "baseline": round(base_val, 2),
+                "predicted": round(new_val, 2),
+                "change_pct": round(((new_val - base_val) / base_val * 100) if base_val > 0 else 0, 1),
+            }
+        
+        # Process SOIL/GROUNDWATER parameters
+        for param, coefs in SOIL_COEFFICIENTS.items():
+            base_val = float(baseline.get(param, 0))
+            
+            rainfall_impact = base_val * (rainfall_change_pct / 100) * coefs.get("rainfall", 0)
+            industrial_impact = base_val * (industrial_change_pct / 100) * coefs.get("industrial", 0)
+            festival_impact = base_val * (festival_activity_pct / 100) * coefs.get("festival", 0)
+            
+            total_impact = rainfall_impact + industrial_impact + festival_impact
             
             new_val = max(0, base_val + total_impact)
             simulated[param] = round(new_val, 2)
@@ -111,7 +177,7 @@ async def simulate_scenario(
                 "industrial_change": f"{industrial_change_pct:+}%",
                 "wind_speed_change": f"{wind_speed_change_pct:+}%",
                 "rainfall_change": f"{rainfall_change_pct:+}%",
-                "temperature_change": f"{temperature_change_pct:+}%",
+                "festival_activity": f"{festival_activity_pct:+}%",
                 "green_cover_change": f"{green_cover_change_pct:+}%",
             },
             "results": impacts,
@@ -124,7 +190,8 @@ async def simulate_scenario(
             "summary": generate_summary(
                 baseline_aqi, new_aqi, 
                 traffic_change_pct, industrial_change_pct,
-                rainfall_change_pct, green_cover_change_pct
+                rainfall_change_pct, green_cover_change_pct,
+                festival_activity_pct
             ),
         }
     except HTTPException:
@@ -133,24 +200,31 @@ async def simulate_scenario(
         logger.error(f"Simulation error: {str(e)}")
         raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, "Simulation failed")
 
-def generate_summary(baseline_aqi, new_aqi, traffic_pct, industrial_pct, rainfall_pct, green_cover_pct):
+def generate_summary(baseline_aqi, new_aqi, traffic_pct, industrial_pct, rainfall_pct, green_cover_pct, festival_pct):
     if new_aqi < baseline_aqi:
         improvement = baseline_aqi - new_aqi
         factors = []
         if rainfall_pct > 0:
-            factors.append("increased rainfall")
+            factors.append("increased rainfall washing out pollutants")
         if green_cover_pct > 0:
-            factors.append("more green cover")
+            factors.append("more green cover filtering air")
         if traffic_pct < 0:
             factors.append("reduced traffic")
         if industrial_pct < 0:
             factors.append("reduced industrial activity")
         
         factor_text = ", ".join(factors) if factors else "these changes"
-        return f"✅ Scenario predicts {improvement} point AQI improvement due to {factor_text}. Air quality would improve from {aqi_category(baseline_aqi)} to {aqi_category(new_aqi)}."
+        return f"✅ Scenario predicts {improvement} point AQI improvement due to {factor_text}. Air quality would improve from {aqi_category(baseline_aqi)} to {aqi_category(new_aqi)}. Rainfall also improves water quality by diluting groundwater TDS."
     elif new_aqi > baseline_aqi:
         deterioration = new_aqi - baseline_aqi
-        return f"⚠️ Scenario predicts {deterioration} point AQI deterioration. Immediate mitigation needed."
+        warnings = []
+        if festival_pct > 0:
+            warnings.append("Festival activities (firecrackers, increased traffic, waste) significantly worsen air quality and water pollution.")
+        if rainfall_pct > 0 and festival_pct > 0:
+            warnings.append("Heavy rainfall during festivals washes waste into water bodies, increasing BOD and TDS.")
+        
+        warning_text = " ".join(warnings) if warnings else "Immediate mitigation needed."
+        return f"⚠️ Scenario predicts {deterioration} point AQI deterioration. {warning_text}"
     return "Minimal impact predicted from these changes."
 
 def pm25_to_aqi(pm25):
