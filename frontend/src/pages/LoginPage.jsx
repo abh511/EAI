@@ -135,13 +135,13 @@ export default function LoginPage() {
           <form onSubmit={handleSignUp} className="bg-white flex items-center justify-center flex-col px-12 h-full text-center">
             <h1 className="font-bold text-2xl mb-4">Create Account</h1>
             <div className="flex gap-2 my-5">
-              <a href="#" className="border border-gray-300 rounded-full inline-flex justify-center items-center w-10 h-10 hover:border-[#FF4B2B] transition">
+              <a href="#" className="border border-gray-300 rounded-full inline-flex justify-center items-center w-10 h-10 hover:border-[#10b981] transition">
                 <i className="fab fa-facebook-f"></i>
               </a>
-              <a href="#" className="border border-gray-300 rounded-full inline-flex justify-center items-center w-10 h-10 hover:border-[#FF4B2B] transition">
+              <a href="#" className="border border-gray-300 rounded-full inline-flex justify-center items-center w-10 h-10 hover:border-[#10b981] transition">
                 <i className="fab fa-google-plus-g"></i>
               </a>
-              <a href="#" className="border border-gray-300 rounded-full inline-flex justify-center items-center w-10 h-10 hover:border-[#FF4B2B] transition">
+              <a href="#" className="border border-gray-300 rounded-full inline-flex justify-center items-center w-10 h-10 hover:border-[#10b981] transition">
                 <i className="fab fa-linkedin-in"></i>
               </a>
             </div>
@@ -189,13 +189,13 @@ export default function LoginPage() {
           <form onSubmit={handleSignIn} className="bg-white flex items-center justify-center flex-col px-12 h-full text-center">
             <h1 className="font-bold text-2xl mb-4">Sign in</h1>
             <div className="flex gap-2 my-5">
-              <a href="#" className="border border-gray-300 rounded-full inline-flex justify-center items-center w-10 h-10 hover:border-[#FF4B2B] transition">
+              <a href="#" className="border border-gray-300 rounded-full inline-flex justify-center items-center w-10 h-10 hover:border-[#10b981] transition">
                 <i className="fab fa-facebook-f"></i>
               </a>
-              <a href="#" className="border border-gray-300 rounded-full inline-flex justify-center items-center w-10 h-10 hover:border-[#FF4B2B] transition">
+              <a href="#" className="border border-gray-300 rounded-full inline-flex justify-center items-center w-10 h-10 hover:border-[#10b981] transition">
                 <i className="fab fa-google-plus-g"></i>
               </a>
-              <a href="#" className="border border-gray-300 rounded-full inline-flex justify-center items-center w-10 h-10 hover:border-[#FF4B2B] transition">
+              <a href="#" className="border border-gray-300 rounded-full inline-flex justify-center items-center w-10 h-10 hover:border-[#10b981] transition">
                 <i className="fab fa-linkedin-in"></i>
               </a>
             </div>
@@ -216,7 +216,7 @@ export default function LoginPage() {
               className="input"
               required
             />
-            <a href="#" className="text-sm text-gray-700 my-4 hover:text-[#FF4B2B] transition">Forgot your password?</a>
+            <a href="#" className="text-sm text-gray-700 my-4 hover:text-[#10b981] transition">Forgot your password?</a>
             <button type="submit" disabled={loading} className="btn-primary">
               {loading ? 'Signing In...' : 'Sign In'}
             </button>
@@ -236,7 +236,7 @@ export default function LoginPage() {
           <div 
             className="relative h-full w-[200%] transition-transform duration-700 ease-in-out text-white"
             style={{
-              background: 'linear-gradient(to right, #FF4B2B, #FF416C)',
+              background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
               left: '-100%',
               transform: isSignUp ? 'translateX(50%)' : 'translateX(0)',
             }}
@@ -252,7 +252,7 @@ export default function LoginPage() {
               <p className="text-sm leading-5 tracking-wide my-5">To keep connected with us please login with your personal info</p>
               <button 
                 onClick={() => setIsSignUp(false)}
-                className="bg-transparent border-2 border-white rounded-full text-white text-xs font-bold py-3 px-11 uppercase tracking-wider transition hover:bg-white hover:text-[#FF4B2B]"
+                className="bg-transparent border-2 border-white rounded-full text-white text-xs font-bold py-3 px-11 uppercase tracking-wider transition hover:bg-white hover:text-[#10b981]"
               >
                 Sign In
               </button>
@@ -269,7 +269,7 @@ export default function LoginPage() {
               <p className="text-sm leading-5 tracking-wide my-5">Enter your personal details and start journey with us</p>
               <button 
                 onClick={() => setIsSignUp(true)}
-                className="bg-transparent border-2 border-white rounded-full text-white text-xs font-bold py-3 px-11 uppercase tracking-wider transition hover:bg-white hover:text-[#FF4B2B]"
+                className="bg-transparent border-2 border-white rounded-full text-white text-xs font-bold py-3 px-11 uppercase tracking-wider transition hover:bg-white hover:text-[#10b981]"
               >
                 Sign Up
               </button>
