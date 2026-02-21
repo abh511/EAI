@@ -197,8 +197,8 @@ export default function SimulatorPage() {
             </div>
             <input
               type="range"
-              min="-100"
-              max="200"
+              min="-50"
+              max="100"
               step="10"
               value={scenario.rainfall_change_pct}
               onChange={e => setScenario(s => ({ ...s, rainfall_change_pct: Number(e.target.value) }))}
@@ -207,7 +207,7 @@ export default function SimulatorPage() {
                 width: '100%',
                 height: '8px',
                 borderRadius: '4px',
-                background: `linear-gradient(to right, #10b981 0%, #10b981 ${((scenario.rainfall_change_pct + 100) / 300) * 100}%, #e5e7eb ${((scenario.rainfall_change_pct + 100) / 300) * 100}%, #e5e7eb 100%)`,
+                background: `linear-gradient(to right, #10b981 0%, #10b981 ${((scenario.rainfall_change_pct + 50) / 150) * 100}%, #e5e7eb ${((scenario.rainfall_change_pct + 50) / 150) * 100}%, #e5e7eb 100%)`,
                 outline: 'none',
                 appearance: 'none',
                 WebkitAppearance: 'none'
@@ -233,9 +233,9 @@ export default function SimulatorPage() {
             </div>
             <input
               type="range"
-              min="-100"
-              max="300"
-              step="25"
+              min="-50"
+              max="100"
+              step="10"
               value={scenario.festival_activity_pct}
               onChange={e => setScenario(s => ({ ...s, festival_activity_pct: Number(e.target.value) }))}
               className="slider"
@@ -243,7 +243,7 @@ export default function SimulatorPage() {
                 width: '100%',
                 height: '8px',
                 borderRadius: '4px',
-                background: `linear-gradient(to right, #10b981 0%, #10b981 ${((scenario.festival_activity_pct + 100) / 400) * 100}%, #e5e7eb ${((scenario.festival_activity_pct + 100) / 400) * 100}%, #e5e7eb 100%)`,
+                background: `linear-gradient(to right, #10b981 0%, #10b981 ${((scenario.festival_activity_pct + 50) / 150) * 100}%, #e5e7eb ${((scenario.festival_activity_pct + 50) / 150) * 100}%, #e5e7eb 100%)`,
                 outline: 'none',
                 appearance: 'none',
                 WebkitAppearance: 'none'

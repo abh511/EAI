@@ -16,8 +16,8 @@ async def simulate_scenario(
     traffic_change_pct: float = Query(0, ge=-50, le=100),
     industrial_change_pct: float = Query(0, ge=-50, le=100),
     wind_speed_change_pct: float = Query(0, ge=-50, le=100),
-    rainfall_change_pct: float = Query(0, ge=-100, le=200),
-    festival_activity_pct: float = Query(0, ge=-100, le=300),
+    rainfall_change_pct: float = Query(0, ge=-50, le=100),
+    festival_activity_pct: float = Query(0, ge=-50, le=100),
     green_cover_change_pct: float = Query(0, ge=-50, le=100),
 ):
     """
