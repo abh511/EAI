@@ -17,7 +17,13 @@ const useAppStore = create((set) => ({
     set({ location });
   },
 
-  setUser: (user) => set({ user }),
+  setUser: (user) => {
+    if (user && user.token) {
+      localStorage.setItem('ew_token', user.token);
+      localStorage.setItem('ew_user', JSON.stringify(user));
+    }
+    set({ user });
+  },
 
   clearUser: () => {
     localStorage.clear();

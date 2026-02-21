@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import useAppStore from '../store/useAppStore';
+import { supabase } from '../services/supabase';
 import toast from 'react-hot-toast';
 
 export default function Layout({ children, title, subtitle }) {
@@ -31,21 +32,31 @@ export default function Layout({ children, title, subtitle }) {
     }
   };
 
-  const handleLogout = () => {
-    clearUser();
-    toast.success('Logged out successfully');
-    navigate('/login');
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+      clearUser();
+      toast.success('Logged out successfully');
+      navigate('/login');
+    } catch (error) {
+      console.error('Logout error:', error);
+      // Still clear local state even if Supabase call fails
+      clearUser();
+      navigate('/login');
+    }
   };
 
   const navItems = [
     { icon: 'fas fa-tachometer-alt', label: 'Dashboard', path: '/dashboard' },
     { icon: 'fas fa-home', label: 'Home', path: '/home' },
     { icon: 'fas fa-map-marked-alt', label: 'Map View', path: '/map' },
-    { icon: 'fas fa-chart-line', label: '48hr Forecast', path: '/forecast' },
+    { icon: 'fas fa-chart-line', label: 'Forecast', path: '/forecast' },
     { icon: 'fas fa-flask', label: 'Simulator', path: '/simulator' },
     { icon: 'fas fa-building', label: 'Site Analyzer', path: '/site-analyzer' },
     { icon: 'fas fa-bell', label: 'Alerts', path: '/alerts' },
     { icon: 'fas fa-comment-alt', label: 'Report Issue', path: '/grievance' },
+    { icon: 'fas fa-cog', label: 'Settings', path: '/settings' },
+    { icon: 'fas fa-user', label: 'Profile', path: '/profile' },
     { icon: 'fas fa-map-marker-alt', label: 'Change Location', path: '/select-city' },
   ];
 
@@ -60,7 +71,11 @@ export default function Layout({ children, title, subtitle }) {
         }}
       >
         <div className="h-20 flex items-center justify-center">
-          <h2 className="text-2xl font-extrabold tracking-wider" style={{ color: '#333' }}>
+          <h2 className="text-2xl font-extrabold tracking-wider" style={{ 
+            background: 'linear-gradient(to right, #10b981, #059669)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent'
+          }}>
             EnviroWatch
           </h2>
         </div>
@@ -128,18 +143,6 @@ export default function Layout({ children, title, subtitle }) {
                 {city || 'No City Selected'}
               </small>
             </div>
-            <button
-              onClick={toggleDarkMode}
-              className="w-10 h-10 rounded-full flex items-center justify-center transition-all hover:bg-gray-100"
-              style={{ border: '1px solid #eee' }}
-              title={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-            >
-              {darkMode ? (
-                <i className="fas fa-sun text-yellow-500"></i>
-              ) : (
-                <i className="fas fa-moon text-gray-600"></i>
-              )}
-            </button>
             <img
               src="https://via.placeholder.com/40"
               alt="Profile"

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { authAPI } from '../services/api';
+import { supabase } from '../services/supabase';
 import useAppStore from '../store/useAppStore';
 import toast from 'react-hot-toast';
 
@@ -17,8 +17,34 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
     try {
-      const response = await authAPI.login(signInData.email, signInData.password);
-      setUser(response.data.user);
+      // Demo mode bypass
+      if (signInData.email.includes('demo') || signInData.email.includes('test')) {
+        setUser({
+          id: 'demo-user-' + Date.now(),
+          email: signInData.email,
+          name: signInData.email.split('@')[0],
+          token: 'demo-token-' + Date.now(),
+        });
+        toast.success('Welcome back! (Demo Mode)');
+        navigate('/select-city');
+        setLoading(false);
+        return;
+      }
+
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: signInData.email,
+        password: signInData.password,
+      });
+
+      if (error) throw error;
+
+      setUser({
+        id: data.user.id,
+        email: data.user.email,
+        name: data.user.user_metadata?.full_name || data.user.email.split('@')[0],
+        token: data.session.access_token,
+      });
+
       toast.success('Welcome back!');
       navigate('/select-city');
     } catch (error) {
@@ -32,10 +58,50 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
     try {
-      await authAPI.register(signUpData.name, signUpData.email, signUpData.password);
-      toast.success('Account created! Please sign in.');
-      setIsSignUp(false);
-      setSignUpData({ name: '', email: '', password: '' });
+      // Demo mode bypass
+      if (signUpData.email.includes('demo') || signUpData.email.includes('test')) {
+        setUser({
+          id: 'demo-user-' + Date.now(),
+          email: signUpData.email,
+          name: signUpData.name || signUpData.email.split('@')[0],
+          token: 'demo-token-' + Date.now(),
+        });
+        toast.success('Account created successfully! (Demo Mode)');
+        navigate('/select-city');
+        setLoading(false);
+        return;
+      }
+
+      const { data, error } = await supabase.auth.signUp({
+        email: signUpData.email,
+        password: signUpData.password,
+        options: {
+          data: {
+            full_name: signUpData.name,
+            role: 'citizen',
+          },
+          emailRedirectTo: window.location.origin,
+        },
+      });
+
+      if (error) throw error;
+
+      // If email confirmation is disabled, user can login immediately
+      if (data.user && data.session) {
+        setUser({
+          id: data.user.id,
+          email: data.user.email,
+          name: signUpData.name || data.user.email.split('@')[0],
+          token: data.session.access_token,
+        });
+        toast.success('Account created successfully!');
+        navigate('/select-city');
+      } else {
+        // Email confirmation required
+        toast.success('Account created! Please check your email to confirm.');
+        setIsSignUp(false);
+        setSignUpData({ name: '', email: '', password: '' });
+      }
     } catch (error) {
       toast.error(error.message || 'Registration failed');
     } finally {

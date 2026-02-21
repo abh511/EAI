@@ -1,206 +1,192 @@
-import { useEffect, useRef } from 'react';
-import Layout from '../components/Layout';
-import useAppStore from '../store/useAppStore';
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 export default function HomePage() {
-  const { city, location } = useAppStore();
-  const globeRef = useRef(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    // Simple rotating globe animation using CSS
-    const globe = globeRef.current;
-    if (globe) {
-      let rotation = 0;
-      const animate = () => {
-        rotation += 0.2;
-        globe.style.transform = `rotateY(${rotation}deg)`;
-        requestAnimationFrame(animate);
+    // Load scripts directly in head
+    const scripts = [
+      'https://www.amcharts.com/lib/4/core.js',
+      'https://www.amcharts.com/lib/4/maps.js',
+      'https://www.amcharts.com/lib/4/geodata/worldLow.js',
+      'https://www.amcharts.com/lib/4/themes/animated.js'
+    ];
+
+    let loadedCount = 0;
+
+    scripts.forEach(src => {
+      const script = document.createElement('script');
+      script.src = src;
+      script.onload = () => {
+        loadedCount++;
+        if (loadedCount === scripts.length) {
+          setTimeout(initGlobe, 100);
+        }
       };
-      animate();
+      document.head.appendChild(script);
+    });
+
+    function initGlobe() {
+      if (!window.am4core || !window.am4maps) return;
+
+      window.am4core.useTheme(window.am4themes_animated);
+
+      const chart = window.am4core.create("chartdiv", window.am4maps.MapChart);
+      chart.geodata = window.am4geodata_worldLow;
+      chart.projection = new window.am4maps.projections.Orthographic();
+      chart.panBehavior = "rotateLongLat";
+      chart.deltaLatitude = -20;
+      chart.padding(20, 20, 20, 20);
+
+      const polygonSeries = chart.series.push(new window.am4maps.MapPolygonSeries());
+      polygonSeries.useGeodata = true;
+
+      const polygonTemplate = polygonSeries.mapPolygons.template;
+      polygonTemplate.tooltipText = "{name}";
+      polygonTemplate.fill = window.am4core.color("#3a9d5d");
+      polygonTemplate.stroke = window.am4core.color("#2d7a47");
+      polygonTemplate.strokeWidth = 0.5;
+
+      const graticuleSeries = chart.series.push(new window.am4maps.GraticuleSeries());
+      graticuleSeries.mapLines.template.line.stroke = window.am4core.color("#ffffff");
+      graticuleSeries.mapLines.template.line.strokeOpacity = 0.08;
+      graticuleSeries.fitExtent = false;
+
+      chart.backgroundSeries.mapPolygons.template.polygon.fillOpacity = 1;
+      chart.backgroundSeries.mapPolygons.template.polygon.fill = window.am4core.color("#1e90ff");
+
+      const hs = polygonTemplate.states.create("hover");
+      hs.properties.fill = chart.colors.getIndex(0).brighten(-0.5);
+
+      setTimeout(function() {
+        chart.animate({
+          property: "deltaLongitude",
+          to: 100000
+        }, 20000000);
+      }, 3000);
     }
   }, []);
 
   return (
-    <Layout>
-      <div className="min-h-[calc(100vh-200px)] flex items-center justify-center">
-        <div className="text-center max-w-4xl mx-auto px-6">
-          {/* Globe Container */}
-          <div className="mb-12 flex justify-center">
-            <div 
-              className="relative"
-              style={{
-                width: '300px',
-                height: '300px',
-                perspective: '1000px',
-              }}
-            >
-              <div
-                ref={globeRef}
-                className="w-full h-full rounded-full"
-                style={{
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                  boxShadow: '0 20px 60px rgba(102, 126, 234, 0.4), inset 0 0 50px rgba(255,255,255,0.1)',
-                  position: 'relative',
-                  transformStyle: 'preserve-3d',
-                }}
-              >
-                {/* Globe grid lines */}
-                <div 
-                  className="absolute inset-0 rounded-full"
-                  style={{
-                    background: `
-                      repeating-linear-gradient(
-                        0deg,
-                        transparent,
-                        transparent 29px,
-                        rgba(255,255,255,0.1) 29px,
-                        rgba(255,255,255,0.1) 30px
-                      ),
-                      repeating-linear-gradient(
-                        90deg,
-                        transparent,
-                        transparent 29px,
-                        rgba(255,255,255,0.1) 29px,
-                        rgba(255,255,255,0.1) 30px
-                      )
-                    `,
-                  }}
-                />
-                {/* Globe shine */}
-                <div 
-                  className="absolute inset-0 rounded-full"
-                  style={{
-                    background: 'radial-gradient(circle at 30% 30%, rgba(255,255,255,0.3), transparent 50%)',
-                  }}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Welcome Text */}
-          <h1 
-            className="text-5xl font-bold mb-6"
-            style={{
-              background: 'linear-gradient(to right, #FF4B2B, #FF416C)',
+    <div className="min-h-screen" style={{ background: '#ffffff' }}>
+      {/* Header */}
+      <div className="bg-white shadow-sm border-b" style={{ borderColor: '#e5e7eb' }}>
+        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold" style={{ 
+              background: 'linear-gradient(to right, #10b981, #059669)',
               WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text',
+              WebkitTextFillColor: 'transparent'
+            }}>EnviroWatch</h1>
+            <p className="text-xs" style={{ color: '#6b7280' }}>Environmental Intelligence Platform</p>
+          </div>
+          <button
+            onClick={() => navigate('/select-city')}
+            className="px-6 py-2 rounded-lg font-semibold text-sm transition-all"
+            style={{
+              background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+              color: '#ffffff',
+              boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)'
             }}
           >
-            Welcome to EnviroWatch AI
-          </h1>
-          
-          <p className="text-xl mb-8" style={{ color: '#555' }}>
-            Real-time Environmental Monitoring & AI-Powered Insights
-          </p>
+            Get Started <i className="fas fa-arrow-right ml-2"></i>
+          </button>
+        </div>
+      </div>
 
-          {/* Info Cards */}
-          <div className="grid md:grid-cols-3 gap-6 mt-12">
-            <div className="card text-center" style={{ padding: '2rem' }}>
-              <div 
-                className="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center"
-                style={{ background: 'linear-gradient(135deg, #FF4B2B, #FF416C)' }}
-              >
-                <i className="fas fa-chart-line text-3xl text-white"></i>
-              </div>
-              <h3 className="text-lg font-bold mb-2" style={{ color: '#333' }}>
-                Real-Time Monitoring
-              </h3>
-              <p className="text-sm" style={{ color: '#8390A2' }}>
-                Track air quality, water quality, noise levels, and more across multiple locations
-              </p>
-            </div>
-
-            <div className="card text-center" style={{ padding: '2rem' }}>
-              <div 
-                className="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center"
-                style={{ background: 'linear-gradient(135deg, #667eea, #764ba2)' }}
-              >
-                <i className="fas fa-brain text-3xl text-white"></i>
-              </div>
-              <h3 className="text-lg font-bold mb-2" style={{ color: '#333' }}>
-                AI-Powered Insights
-              </h3>
-              <p className="text-sm" style={{ color: '#8390A2' }}>
-                Get intelligent recommendations and predictions based on environmental data
-              </p>
-            </div>
-
-            <div className="card text-center" style={{ padding: '2rem' }}>
-              <div 
-                className="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center"
-                style={{ background: 'linear-gradient(135deg, #f093fb, #f5576c)' }}
-              >
-                <i className="fas fa-bell text-3xl text-white"></i>
-              </div>
-              <h3 className="text-lg font-bold mb-2" style={{ color: '#333' }}>
-                Smart Alerts
-              </h3>
-              <p className="text-sm" style={{ color: '#8390A2' }}>
-                Receive instant notifications when environmental parameters exceed safe limits
-              </p>
-            </div>
+      {/* Hero Section */}
+      <div className="max-w-7xl mx-auto px-6 py-12">
+        <div className="grid lg:grid-cols-2 gap-12 items-center">
+          {/* Left: Text Content */}
+          <div className="order-1">
+            <h2 className="font-black mb-3" style={{ 
+              fontSize: '3.5rem',
+              lineHeight: '1.1',
+              color: '#111827',
+              letterSpacing: '-0.02em'
+            }}>
+              AI-Powered<br />
+              Environmental<br />
+              Monitoring
+            </h2>
+            <p className="text-xl mb-6" style={{ color: '#4b5563', lineHeight: '1.6' }}>
+              Real-time risk detection and 48-hour forecasting for Indian cities using advanced machine learning
+            </p>
+            <button
+              onClick={() => navigate('/select-city')}
+              className="px-8 py-4 rounded-xl font-bold text-lg transition-all"
+              style={{
+                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                color: '#ffffff',
+                boxShadow: '0 8px 20px rgba(16, 185, 129, 0.4)'
+              }}
+            >
+              Start Monitoring <i className="fas fa-arrow-right ml-2"></i>
+            </button>
           </div>
 
-          {/* Current Location Info */}
-          {city && location && (
-            <div className="mt-12 card" style={{ padding: '2rem', background: 'linear-gradient(135deg, rgba(255, 75, 43, 0.05), rgba(255, 65, 108, 0.05))' }}>
-              <div className="flex items-center justify-center gap-3">
-                <i className="fas fa-map-marker-alt text-2xl" style={{ color: '#FF4B2B' }}></i>
-                <div>
-                  <p className="text-sm" style={{ color: '#8390A2' }}>Currently Monitoring</p>
-                  <p className="text-xl font-bold" style={{ color: '#333' }}>
-                    {location}, {city}
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Features List */}
-          <div className="mt-12 grid md:grid-cols-2 gap-4 text-left">
-            <div className="flex items-start gap-3">
-              <i className="fas fa-check-circle text-xl mt-1" style={{ color: '#10b981' }}></i>
-              <div>
-                <h4 className="font-semibold mb-1" style={{ color: '#333' }}>7 Environmental Pillars</h4>
-                <p className="text-sm" style={{ color: '#8390A2' }}>
-                  Air, Water, Noise, Industrial, Waste, Heat, Groundwater
-                </p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <i className="fas fa-check-circle text-xl mt-1" style={{ color: '#10b981' }}></i>
-              <div>
-                <h4 className="font-semibold mb-1" style={{ color: '#333' }}>48-Hour Forecasting</h4>
-                <p className="text-sm" style={{ color: '#8390A2' }}>
-                  Predict future environmental conditions with AI
-                </p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <i className="fas fa-check-circle text-xl mt-1" style={{ color: '#10b981' }}></i>
-              <div>
-                <h4 className="font-semibold mb-1" style={{ color: '#333' }}>What-If Simulator</h4>
-                <p className="text-sm" style={{ color: '#8390A2' }}>
-                  Test scenarios and predict environmental impact
-                </p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <i className="fas fa-check-circle text-xl mt-1" style={{ color: '#10b981' }}></i>
-              <div>
-                <h4 className="font-semibold mb-1" style={{ color: '#333' }}>Site Suitability Analysis</h4>
-                <p className="text-sm" style={{ color: '#8390A2' }}>
-                  AI-powered construction compliance checker
-                </p>
-              </div>
-            </div>
+          {/* Right: Globe */}
+          <div className="order-2 flex justify-center lg:justify-end">
+            <div 
+              id="chartdiv" 
+              style={{ 
+                width: '100%',
+                maxWidth: '500px',
+                height: '500px',
+                backgroundColor: '#ffffff',
+                borderRadius: '16px'
+              }}
+            ></div>
           </div>
         </div>
       </div>
 
-      {/* Font Awesome CDN */}
-      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
-    </Layout>
+      {/* Feature Cards */}
+      <div className="max-w-7xl mx-auto px-6 pb-12">
+        <div className="grid md:grid-cols-3 gap-6">
+          <FeatureCard
+            title="AI Risk Prediction"
+            description="Machine learning models trained on 10,000+ data points deliver 99.75% accurate environmental risk assessments"
+          />
+          <FeatureCard
+            title="48-Hour Forecasting"
+            description="Advanced algorithms predict environmental conditions two days ahead for proactive decision-making"
+          />
+          <FeatureCard
+            title="7-Pillar Monitoring"
+            description="Comprehensive tracking of Air, Water, Noise, Industrial, Waste, Heat, and Groundwater quality"
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Feature Card Component - Clean without icon boxes
+function FeatureCard({ title, description }) {
+  const [isHovered, setIsHovered] = useState(false);
+
+  return (
+    <div 
+      className="p-8 rounded-2xl transition-all duration-300 cursor-pointer"
+      style={{ 
+        backgroundColor: '#ffffff',
+        border: '1px solid #e5e7eb',
+        transform: isHovered ? 'translateY(-4px)' : 'translateY(0)',
+        boxShadow: isHovered 
+          ? '0 12px 24px rgba(0, 0, 0, 0.1)' 
+          : '0 4px 6px rgba(0, 0, 0, 0.05)',
+      }}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      <h3 className="text-2xl font-bold mb-3" style={{ color: '#111827' }}>
+        {title}
+      </h3>
+      <p style={{ color: '#6b7280', fontSize: '15px', lineHeight: '1.6' }}>
+        {description}
+      </p>
+    </div>
   );
 }

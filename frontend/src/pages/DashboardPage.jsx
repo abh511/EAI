@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { dashboardAPI } from '../services/api';
 import useAppStore from '../store/useAppStore';
@@ -29,12 +29,16 @@ export default function DashboardPage() {
       navigate('/select-city');
       return;
     }
-    fetchData();
-    fetchInsights();
-    fetchMLPrediction();
+    
+    // Fetch all data in parallel
+    Promise.all([
+      fetchData(),
+      fetchInsights(),
+      fetchMLPrediction()
+    ]);
   }, [city, location]);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       const response = await dashboardAPI.getSummary(city, location);
@@ -44,18 +48,18 @@ export default function DashboardPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [city, location]);
 
-  const fetchInsights = async () => {
+  const fetchInsights = useCallback(async () => {
     try {
       const response = await dashboardAPI.getAIInsights(city, location);
       setInsights(response.data);
     } catch (error) {
       console.error('Failed to load AI insights:', error);
     }
-  };
+  }, [city, location]);
 
-  const fetchMLPrediction = async () => {
+  const fetchMLPrediction = useCallback(async () => {
     setMlLoading(true);
     try {
       const response = await fetch(
@@ -70,9 +74,9 @@ export default function DashboardPage() {
     } finally {
       setMlLoading(false);
     }
-  };
+  }, [city, location]);
 
-  const getStatusColor = (status) => {
+  const getStatusColor = useCallback((status) => {
     const colors = {
       good: '#10b981',
       moderate: '#f59e0b',
@@ -80,14 +84,23 @@ export default function DashboardPage() {
       critical: '#dc2626',
     };
     return colors[status] || colors.moderate;
-  };
+  }, []);
+
+  const getAQIColor = useCallback((aqi) => {
+    if (aqi <= 50) return { bg: '#10b981', label: 'Good' }; // Green
+    if (aqi <= 100) return { bg: '#f59e0b', label: 'Moderate' }; // Yellow
+    if (aqi <= 150) return { bg: '#f97316', label: 'Unhealthy for Sensitive' }; // Orange
+    if (aqi <= 200) return { bg: '#dc2626', label: 'Unhealthy' }; // Red
+    if (aqi <= 300) return { bg: '#9333ea', label: 'Very Unhealthy' }; // Purple
+    return { bg: '#7f1d1d', label: 'Hazardous' }; // Dark Red
+  }, []);
 
   if (loading) {
     return (
       <Layout>
         <div className="flex items-center justify-center h-96">
           <div className="text-center">
-            <i className="fas fa-spinner fa-spin text-4xl mb-4" style={{ color: '#FF4B2B' }}></i>
+            <i className="fas fa-spinner fa-spin text-4xl mb-4" style={{ color: '#10b981' }}></i>
             <p style={{ color: '#8390A2' }}>Loading dashboard...</p>
           </div>
         </div>
@@ -111,14 +124,17 @@ export default function DashboardPage() {
   return (
     <Layout title="Dashboard" subtitle={`${location}, ${city} • ${data.zone_type}`}>
       {/* AQI Hero Card */}
-      <div className="card mb-6" style={{ background: 'linear-gradient(135deg, #FF4B2B 0%, #FF416C 100%)', color: 'white' }}>
+      <div className="card mb-6" style={{ 
+        background: `linear-gradient(135deg, ${getAQIColor(data.aqi).bg} 0%, ${getAQIColor(data.aqi).bg}dd 100%)`, 
+        color: 'white' 
+      }}>
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm mb-2 opacity-90">Air Quality Index</p>
             <div className="flex items-baseline gap-4">
               <span className="text-6xl font-bold">{data.aqi}</span>
               <span className="px-4 py-2 rounded-full text-sm font-semibold bg-white bg-opacity-20">
-                {data.aqi_category}
+                {getAQIColor(data.aqi).label}
               </span>
             </div>
           </div>
@@ -151,10 +167,7 @@ export default function DashboardPage() {
               <i className="fas fa-brain text-2xl" style={{ color: '#10b981' }}></i>
             </div>
             <div>
-              <h3 className="text-lg font-bold" style={{ color: '#333' }}>Machine Learning Risk Assessment</h3>
-              <p className="text-xs" style={{ color: '#8390A2' }}>
-                Trained on 10,000 environmental readings • {mlPrediction.model}
-              </p>
+              <h3 className="text-lg font-bold" style={{ color: '#333' }}>AI Risk Assessment</h3>
             </div>
           </div>
           
@@ -185,7 +198,7 @@ export default function DashboardPage() {
 
             {/* Confidence */}
             <div className="p-4 rounded-lg" style={{ backgroundColor: '#f6f5f7' }}>
-              <p className="text-xs font-semibold uppercase mb-2" style={{ color: '#8390A2' }}>Model Confidence</p>
+              <p className="text-xs font-semibold uppercase mb-2" style={{ color: '#8390A2' }}>Confidence</p>
               <p className="text-3xl font-bold" style={{ color: '#333' }}>
                 {(mlPrediction.confidence * 100).toFixed(1)}%
               </p>
@@ -200,14 +213,14 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* Features Used */}
+            {/* Status */}
             <div className="p-4 rounded-lg" style={{ backgroundColor: '#f6f5f7' }}>
-              <p className="text-xs font-semibold uppercase mb-2" style={{ color: '#8390A2' }}>Analysis Features</p>
-              <p className="text-3xl font-bold" style={{ color: '#333' }}>
-                {mlPrediction.n_features_used}
-              </p>
-              <p className="text-xs mt-1" style={{ color: '#555' }}>
-                Environmental parameters analyzed
+              <p className="text-xs font-semibold uppercase mb-2" style={{ color: '#8390A2' }}>Status</p>
+              <p className="text-lg font-bold" style={{ color: '#333' }}>
+                {mlPrediction.risk_level === 'Low' ? '✓ Safe' : 
+                 mlPrediction.risk_level === 'Medium' ? '⚠ Monitor' :
+                 mlPrediction.risk_level === 'High' ? '⚠ Alert' :
+                 '🚨 Critical'}
               </p>
             </div>
           </div>
@@ -237,13 +250,6 @@ export default function DashboardPage() {
                 </div>
               ))}
             </div>
-          </div>
-
-          <div className="mt-4 pt-4 border-t" style={{ borderColor: '#e5e7eb' }}>
-            <p className="text-xs" style={{ color: '#8390A2' }}>
-              <i className="fas fa-info-circle mr-1"></i>
-              This prediction uses a Random Forest + XGBoost ensemble model trained on real environmental data with 99.75% accuracy.
-            </p>
           </div>
         </div>
       )}
@@ -328,7 +334,7 @@ export default function DashboardPage() {
                 </div>
               </div>
               <div>
-                <i className={`${iconClass} text-5xl`} style={{ color: '#FF4B2B' }}></i>
+                <i className={`${iconClass} text-5xl`} style={{ color: '#10b981' }}></i>
               </div>
             </div>
           );
