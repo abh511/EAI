@@ -16,6 +16,9 @@ async def simulate_scenario(
     traffic_change_pct: float = Query(0, ge=-50, le=100),
     industrial_change_pct: float = Query(0, ge=-50, le=100),
     wind_speed_change_pct: float = Query(0, ge=-50, le=100),
+    rainfall_change_pct: float = Query(0, ge=-100, le=200),
+    temperature_change_pct: float = Query(0, ge=-20, le=30),
+    green_cover_change_pct: float = Query(0, ge=-50, le=100),
 ):
     """
     Simulate environmental impact of parameter changes
@@ -27,12 +30,49 @@ async def simulate_scenario(
             raise HTTPException(status.HTTP_404_NOT_FOUND, f"No data for {location}, {city}")
         
         # Impact coefficients (empirically derived)
+        # Positive coefficient = increases pollution
+        # Negative coefficient = decreases pollution
         COEFFICIENTS = {
-            "pm2_5_ug_m3": {"traffic": 0.4, "industrial": 0.3, "wind": -0.25},
-            "pm10_ug_m3": {"traffic": 0.5, "industrial": 0.35, "wind": -0.3},
-            "no2_ug_m3": {"traffic": 0.6, "industrial": 0.4, "wind": -0.2},
-            "nox_ug_m3": {"traffic": 0.3, "industrial": 0.7, "wind": -0.15},
-            "sox_ug_m3": {"traffic": 0.1, "industrial": 0.8, "wind": -0.1},
+            "pm2_5_ug_m3": {
+                "traffic": 0.4, 
+                "industrial": 0.3, 
+                "wind": -0.25,
+                "rainfall": -0.35,      # Rain washes out particulates
+                "temperature": 0.15,    # Higher temp increases photochemical reactions
+                "green_cover": -0.20,   # Trees filter air
+            },
+            "pm10_ug_m3": {
+                "traffic": 0.5, 
+                "industrial": 0.35, 
+                "wind": -0.3,
+                "rainfall": -0.40,      # Rain is very effective for larger particles
+                "temperature": 0.10,
+                "green_cover": -0.18,
+            },
+            "no2_ug_m3": {
+                "traffic": 0.6, 
+                "industrial": 0.4, 
+                "wind": -0.2,
+                "rainfall": -0.15,      # Less effective for gases
+                "temperature": 0.25,    # Higher temp increases NOx formation
+                "green_cover": -0.12,
+            },
+            "nox_ug_m3": {
+                "traffic": 0.3, 
+                "industrial": 0.7, 
+                "wind": -0.15,
+                "rainfall": -0.10,
+                "temperature": 0.30,    # Temperature strongly affects NOx
+                "green_cover": -0.10,
+            },
+            "sox_ug_m3": {
+                "traffic": 0.1, 
+                "industrial": 0.8, 
+                "wind": -0.1,
+                "rainfall": -0.25,      # Rain dissolves SO2
+                "temperature": 0.08,
+                "green_cover": -0.08,
+            },
         }
         
         simulated = {}
@@ -41,12 +81,19 @@ async def simulate_scenario(
         for param, coefs in COEFFICIENTS.items():
             base_val = float(baseline.get(param, 0))
             
-            # Calculate impact
+            # Calculate impact from each factor
             traffic_impact = base_val * (traffic_change_pct / 100) * coefs["traffic"]
             industrial_impact = base_val * (industrial_change_pct / 100) * coefs["industrial"]
             wind_impact = base_val * (wind_speed_change_pct / 100) * coefs["wind"]
+            rainfall_impact = base_val * (rainfall_change_pct / 100) * coefs["rainfall"]
+            temperature_impact = base_val * (temperature_change_pct / 100) * coefs["temperature"]
+            green_cover_impact = base_val * (green_cover_change_pct / 100) * coefs["green_cover"]
             
-            new_val = max(0, base_val + traffic_impact + industrial_impact + wind_impact)
+            # Sum all impacts
+            total_impact = (traffic_impact + industrial_impact + wind_impact + 
+                          rainfall_impact + temperature_impact + green_cover_impact)
+            
+            new_val = max(0, base_val + total_impact)
             simulated[param] = round(new_val, 2)
             impacts[param] = {
                 "baseline": round(base_val, 2),
@@ -63,6 +110,9 @@ async def simulate_scenario(
                 "traffic_change": f"{traffic_change_pct:+}%",
                 "industrial_change": f"{industrial_change_pct:+}%",
                 "wind_speed_change": f"{wind_speed_change_pct:+}%",
+                "rainfall_change": f"{rainfall_change_pct:+}%",
+                "temperature_change": f"{temperature_change_pct:+}%",
+                "green_cover_change": f"{green_cover_change_pct:+}%",
             },
             "results": impacts,
             "aqi": {
@@ -71,7 +121,11 @@ async def simulate_scenario(
                 "change": new_aqi - baseline_aqi,
                 "category": aqi_category(new_aqi),
             },
-            "summary": generate_summary(baseline_aqi, new_aqi, traffic_change_pct, industrial_change_pct),
+            "summary": generate_summary(
+                baseline_aqi, new_aqi, 
+                traffic_change_pct, industrial_change_pct,
+                rainfall_change_pct, green_cover_change_pct
+            ),
         }
     except HTTPException:
         raise
@@ -79,10 +133,21 @@ async def simulate_scenario(
         logger.error(f"Simulation error: {str(e)}")
         raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, "Simulation failed")
 
-def generate_summary(baseline_aqi, new_aqi, traffic_pct, industrial_pct):
+def generate_summary(baseline_aqi, new_aqi, traffic_pct, industrial_pct, rainfall_pct, green_cover_pct):
     if new_aqi < baseline_aqi:
         improvement = baseline_aqi - new_aqi
-        return f"✅ Scenario predicts {improvement} point AQI improvement. Air quality would improve from {aqi_category(baseline_aqi)} to {aqi_category(new_aqi)}."
+        factors = []
+        if rainfall_pct > 0:
+            factors.append("increased rainfall")
+        if green_cover_pct > 0:
+            factors.append("more green cover")
+        if traffic_pct < 0:
+            factors.append("reduced traffic")
+        if industrial_pct < 0:
+            factors.append("reduced industrial activity")
+        
+        factor_text = ", ".join(factors) if factors else "these changes"
+        return f"✅ Scenario predicts {improvement} point AQI improvement due to {factor_text}. Air quality would improve from {aqi_category(baseline_aqi)} to {aqi_category(new_aqi)}."
     elif new_aqi > baseline_aqi:
         deterioration = new_aqi - baseline_aqi
         return f"⚠️ Scenario predicts {deterioration} point AQI deterioration. Immediate mitigation needed."

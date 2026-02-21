@@ -13,6 +13,9 @@ export default function SimulatorPage() {
     traffic_change_pct: 0,
     industrial_change_pct: 0,
     wind_speed_change_pct: 0,
+    rainfall_change_pct: 0,
+    temperature_change_pct: 0,
+    green_cover_change_pct: 0,
   });
   
   const [results, setResults] = useState(null);
@@ -46,7 +49,14 @@ export default function SimulatorPage() {
   };
   
   const reset = () => {
-    setScenario({ traffic_change_pct: 0, industrial_change_pct: 0, wind_speed_change_pct: 0 });
+    setScenario({ 
+      traffic_change_pct: 0, 
+      industrial_change_pct: 0, 
+      wind_speed_change_pct: 0,
+      rainfall_change_pct: 0,
+      temperature_change_pct: 0,
+      green_cover_change_pct: 0,
+    });
     setResults(null);
   };
   
@@ -165,6 +175,105 @@ export default function SimulatorPage() {
                 height: '8px',
                 borderRadius: '4px',
                 background: `linear-gradient(to right, #10b981 0%, #10b981 ${((scenario.wind_speed_change_pct + 50) / 150) * 100}%, #e5e7eb ${((scenario.wind_speed_change_pct + 50) / 150) * 100}%, #e5e7eb 100%)`,
+                outline: 'none',
+                appearance: 'none',
+                WebkitAppearance: 'none'
+              }}
+            />
+          </div>
+
+          {/* Rainfall Slider */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <label className="text-xl font-bold" style={{ color: '#111827' }}>
+                <i className="fas fa-cloud-rain mr-2" style={{ color: '#10b981' }}></i>
+                Rainfall
+              </label>
+              <span className="text-2xl font-bold" style={{ 
+                color: scenario.rainfall_change_pct > 0 ? '#10b981' : scenario.rainfall_change_pct < 0 ? '#dc2626' : '#6b7280' 
+              }}>
+                {scenario.rainfall_change_pct > 0 ? '+' : ''}{scenario.rainfall_change_pct}%
+              </span>
+            </div>
+            <input
+              type="range"
+              min="-100"
+              max="200"
+              step="10"
+              value={scenario.rainfall_change_pct}
+              onChange={e => setScenario(s => ({ ...s, rainfall_change_pct: Number(e.target.value) }))}
+              className="slider"
+              style={{
+                width: '100%',
+                height: '8px',
+                borderRadius: '4px',
+                background: `linear-gradient(to right, #10b981 0%, #10b981 ${((scenario.rainfall_change_pct + 100) / 300) * 100}%, #e5e7eb ${((scenario.rainfall_change_pct + 100) / 300) * 100}%, #e5e7eb 100%)`,
+                outline: 'none',
+                appearance: 'none',
+                WebkitAppearance: 'none'
+              }}
+            />
+          </div>
+
+          {/* Temperature Slider */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <label className="text-xl font-bold" style={{ color: '#111827' }}>
+                <i className="fas fa-temperature-high mr-2" style={{ color: '#10b981' }}></i>
+                Temperature
+              </label>
+              <span className="text-2xl font-bold" style={{ 
+                color: scenario.temperature_change_pct > 0 ? '#dc2626' : scenario.temperature_change_pct < 0 ? '#10b981' : '#6b7280' 
+              }}>
+                {scenario.temperature_change_pct > 0 ? '+' : ''}{scenario.temperature_change_pct}%
+              </span>
+            </div>
+            <input
+              type="range"
+              min="-20"
+              max="30"
+              step="2"
+              value={scenario.temperature_change_pct}
+              onChange={e => setScenario(s => ({ ...s, temperature_change_pct: Number(e.target.value) }))}
+              className="slider"
+              style={{
+                width: '100%',
+                height: '8px',
+                borderRadius: '4px',
+                background: `linear-gradient(to right, #10b981 0%, #10b981 ${((scenario.temperature_change_pct + 20) / 50) * 100}%, #e5e7eb ${((scenario.temperature_change_pct + 20) / 50) * 100}%, #e5e7eb 100%)`,
+                outline: 'none',
+                appearance: 'none',
+                WebkitAppearance: 'none'
+              }}
+            />
+          </div>
+
+          {/* Green Cover Slider */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <label className="text-xl font-bold" style={{ color: '#111827' }}>
+                <i className="fas fa-tree mr-2" style={{ color: '#10b981' }}></i>
+                Green Cover
+              </label>
+              <span className="text-2xl font-bold" style={{ 
+                color: scenario.green_cover_change_pct > 0 ? '#10b981' : scenario.green_cover_change_pct < 0 ? '#dc2626' : '#6b7280' 
+              }}>
+                {scenario.green_cover_change_pct > 0 ? '+' : ''}{scenario.green_cover_change_pct}%
+              </span>
+            </div>
+            <input
+              type="range"
+              min="-50"
+              max="100"
+              step="5"
+              value={scenario.green_cover_change_pct}
+              onChange={e => setScenario(s => ({ ...s, green_cover_change_pct: Number(e.target.value) }))}
+              className="slider"
+              style={{
+                width: '100%',
+                height: '8px',
+                borderRadius: '4px',
+                background: `linear-gradient(to right, #10b981 0%, #10b981 ${((scenario.green_cover_change_pct + 50) / 150) * 100}%, #e5e7eb ${((scenario.green_cover_change_pct + 50) / 150) * 100}%, #e5e7eb 100%)`,
                 outline: 'none',
                 appearance: 'none',
                 WebkitAppearance: 'none'
