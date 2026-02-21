@@ -250,6 +250,57 @@ export default function SiteAnalyzerPage() {
               </div>
             </div>
           )}
+
+          {/* Alternative Locations */}
+          {result.alternative_locations && result.alternative_locations.length > 0 && (
+            <div className="card" style={{ borderLeft: '4px solid #3b82f6' }}>
+              <div className="flex items-center gap-3 mb-4">
+                <span className="text-2xl">📍</span>
+                <h3 className="text-lg font-bold" style={{ color: '#111827' }}>
+                  Better Alternative Locations
+                </h3>
+              </div>
+              <p className="text-sm mb-4" style={{ color: '#6b7280' }}>
+                These locations in {city} have better environmental conditions for {result.construction_type}:
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {result.alternative_locations.map((alt, idx) => (
+                  <div
+                    key={idx}
+                    className="p-4 rounded-lg transition-all hover:shadow-lg cursor-pointer"
+                    style={{
+                      backgroundColor: '#f0f9ff',
+                      border: '2px solid #3b82f6',
+                    }}
+                  >
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="font-bold text-lg" style={{ color: '#111827' }}>
+                        {alt.location}
+                      </span>
+                      <span className="text-2xl font-bold" style={{ color: '#3b82f6' }}>
+                        {alt.suitability_score}
+                      </span>
+                    </div>
+                    <div className="mb-2">
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div 
+                          className="h-2 rounded-full" 
+                          style={{ 
+                            width: `${alt.suitability_score}%`,
+                            backgroundColor: alt.suitability_score >= 80 ? '#10b981' : 
+                                           alt.suitability_score >= 70 ? '#3b82f6' : '#f59e0b'
+                          }}
+                        ></div>
+                      </div>
+                    </div>
+                    <p className="text-xs" style={{ color: '#6b7280' }}>
+                      <span className="font-semibold">Key Advantage:</span> {alt.key_advantage}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </Layout>
