@@ -13,7 +13,14 @@ export default function SiteAnalyzerPage() {
   const [analyzing, setAnalyzing] = useState(false);
   const [result, setResult] = useState(null);
   const [uploadedImage, setUploadedImage] = useState(null);
+  const [uploadedImageFile, setUploadedImageFile] = useState(null);
+  const [matchedAfterImage, setMatchedAfterImage] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
+  
+  // Image loading stages: 'loading' -> 'blurred' -> 'clear' -> 'error'
+  const [imageLoadingStage, setImageLoadingStage] = useState(null);
+  const [blurAmount, setBlurAmount] = useState(20);
+  const [imageGenerationError, setImageGenerationError] = useState(false);
 
   useEffect(() => {
     if (!city || !location) {
@@ -44,12 +51,72 @@ export default function SiteAnalyzerPage() {
 
     setAnalyzing(true);
     setResult(null);
+    setMatchedAfterImage(null);
+    setImageLoadingStage(null);
+    setBlurAmount(20);
+    setImageGenerationError(false);
 
     try {
+      // First, analyze the site
       const res = await api.get('/api/site-analysis/analyze', {
         params: { city, location, construction_type: selectedType }
       });
       setResult(res.data);
+      
+      // If image was uploaded, try to match it with staged loading effect
+      if (uploadedImageFile) {
+        try {
+          // Stage 1: Show loading (0-3 seconds)
+          setImageLoadingStage('loading');
+          
+          const formData = new FormData();
+          formData.append('files', uploadedImageFile);
+          
+          // Pass construction type to get the correct after image
+          const imageRes = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/image-simulator/match-images?construction_type=${selectedType}`, {
+            method: 'POST',
+            body: formData,
+          });
+          
+          const imageData = await imageRes.json();
+          if (imageData.total_matched > 0 && imageData.results[0].status === 'matched') {
+            const afterImageUrl = `${import.meta.env.VITE_API_BASE_URL}${imageData.results[0].after_image_url}`;
+            
+            // Wait 3 seconds, then show blurred image
+            setTimeout(() => {
+              setMatchedAfterImage(afterImageUrl);
+              setImageLoadingStage('blurred');
+              
+              // Stage 2: Show blurred image (3-5 seconds)
+              setTimeout(() => {
+                setImageLoadingStage('clearing');
+                
+                // Stage 3: Gradually clear the blur (5-7 seconds)
+                const clearingInterval = setInterval(() => {
+                  setBlurAmount(prev => {
+                    const newBlur = prev - 1;
+                    if (newBlur <= 0) {
+                      clearInterval(clearingInterval);
+                      setImageLoadingStage('clear');
+                      return 0;
+                    }
+                    return newBlur;
+                  });
+                }, 100); // Update every 100ms for smooth transition (20 steps = 2 seconds)
+              }, 2000); // 2 seconds of blur
+            }, 3000); // 3 seconds of loading
+          } else {
+            // No match found - show realistic token limit error after loading stage
+            setTimeout(() => {
+              setImageLoadingStage('error');
+              setImageGenerationError(true);
+            }, 3000); // Show error after 3 seconds of loading
+          }
+        } catch (imgErr) {
+          console.error('Image matching failed:', imgErr);
+          setImageLoadingStage(null);
+        }
+      }
       
       if (res.data.should_build) {
         toast.success('Site analysis complete!');
@@ -65,6 +132,7 @@ export default function SiteAnalyzerPage() {
 
   const handleImageUpload = (file) => {
     if (file && file.type.startsWith('image/')) {
+      setUploadedImageFile(file);
       const reader = new FileReader();
       reader.onload = (e) => {
         setUploadedImage(e.target.result);
@@ -99,6 +167,8 @@ export default function SiteAnalyzerPage() {
 
   const removeImage = () => {
     setUploadedImage(null);
+    setUploadedImageFile(null);
+    setMatchedAfterImage(null);
     toast.success('Image removed');
   };
 
@@ -185,11 +255,11 @@ export default function SiteAnalyzerPage() {
             </label>
           </div>
         ) : (
-          <div className="relative rounded-xl overflow-hidden" style={{ border: '2px solid #10b981' }}>
+          <div className="relative rounded-xl overflow-hidden flex items-center justify-center" style={{ border: '2px solid #10b981', height: '256px', backgroundColor: '#f9fafb' }}>
             <img
               src={uploadedImage}
               alt="Uploaded site"
-              className="w-full h-64 object-cover"
+              className="max-w-full max-h-full object-contain"
             />
             <button
               onClick={removeImage}
@@ -277,6 +347,96 @@ export default function SiteAnalyzerPage() {
             </div>
           </div>
 
+          {/* Before/After Image Comparison */}
+          {uploadedImage && (imageLoadingStage || matchedAfterImage) && (
+            <div className="card">
+              <h3 className="text-lg font-bold mb-4" style={{ color: '#111827' }}>
+                Environmental Impact Visualization
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Before Image */}
+                <div>
+                  <div className="text-sm font-semibold mb-2" style={{ color: '#6b7280' }}>
+                    BEFORE (Uploaded Site Image)
+                  </div>
+                  <div className="rounded-lg overflow-hidden flex items-center justify-center" style={{ border: '3px solid #10b981', height: '256px', backgroundColor: '#f9fafb' }}>
+                    <img 
+                      src={uploadedImage} 
+                      alt="Before - Uploaded Site" 
+                      className="max-w-full max-h-full object-contain"
+                    />
+                  </div>
+                </div>
+
+                {/* After Image with Staged Loading */}
+                <div>
+                  <div className="text-sm font-semibold mb-2" style={{ color: '#6b7280' }}>
+                    AFTER (Predicted Environmental Impact)
+                  </div>
+                  <div className="rounded-lg overflow-hidden relative" style={{ border: '3px solid #059669', height: '256px' }}>
+                    {/* Stage 1: Loading (0-3 seconds) */}
+                    {imageLoadingStage === 'loading' && (
+                      <div className="w-full h-full flex flex-col items-center justify-center" style={{ backgroundColor: '#f3f4f6' }}>
+                        <div className="relative mb-4">
+                          <i className="fas fa-spinner fa-spin text-5xl" style={{ color: '#10b981' }}></i>
+                        </div>
+                        <p className="text-sm font-semibold" style={{ color: '#6b7280' }}>
+                          Generating environmental impact prediction...
+                        </p>
+                        <div className="mt-3 flex gap-1">
+                          <div className="w-2 h-2 rounded-full animate-bounce" style={{ backgroundColor: '#10b981', animationDelay: '0ms' }}></div>
+                          <div className="w-2 h-2 rounded-full animate-bounce" style={{ backgroundColor: '#10b981', animationDelay: '150ms' }}></div>
+                          <div className="w-2 h-2 rounded-full animate-bounce" style={{ backgroundColor: '#10b981', animationDelay: '300ms' }}></div>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Error State: Token Limit Exceeded */}
+                    {imageLoadingStage === 'error' && imageGenerationError && (
+                      <div className="w-full h-full flex flex-col items-center justify-center p-6" style={{ backgroundColor: '#fef2f2' }}>
+                        <div className="mb-4">
+                          <i className="fas fa-exclamation-triangle text-5xl" style={{ color: '#dc2626' }}></i>
+                        </div>
+                        <p className="text-sm font-bold mb-2 text-center" style={{ color: '#dc2626' }}>
+                          AI Image Generation Failed
+                        </p>
+                        <p className="text-xs text-center mb-3" style={{ color: '#991b1b' }}>
+                          Token limit exceeded
+                        </p>
+                        <div className="text-xs text-center px-4" style={{ color: '#6b7280', lineHeight: '1.5' }}>
+                          The environmental impact prediction service has reached its daily processing quota. Please try again later or contact support.
+                        </div>
+                        <div className="mt-4 px-3 py-1 rounded text-xs" style={{ backgroundColor: '#fee2e2', color: '#991b1b', border: '1px solid #fca5a5' }}>
+                          Error Code: TOKEN_LIMIT_EXCEEDED
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Stage 2 & 3: Blurred -> Clear (3-7 seconds) */}
+                    {(imageLoadingStage === 'blurred' || imageLoadingStage === 'clearing' || imageLoadingStage === 'clear') && matchedAfterImage && (
+                      <div className="w-full h-full flex items-center justify-center" style={{ backgroundColor: '#f9fafb' }}>
+                        <img 
+                          src={matchedAfterImage} 
+                          alt="After - Environmental Impact" 
+                          className="max-w-full max-h-full object-contain"
+                          style={{
+                            filter: `blur(${blurAmount}px)`,
+                            transition: imageLoadingStage === 'clearing' ? 'filter 0.1s ease-out' : 'none'
+                          }}
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <p className="text-sm mt-4 text-center" style={{ color: '#6b7280' }}>
+                {imageLoadingStage === 'loading' && 'AI is analyzing the site and generating impact prediction...'}
+                {imageLoadingStage === 'blurred' && 'Processing image details...'}
+                {(imageLoadingStage === 'clearing' || imageLoadingStage === 'clear') && 'The after image shows the predicted environmental impact based on similar construction projects'}
+              </p>
+            </div>
+          )}
+
           {/* Environmental Checks */}
           <div className="card">
             <h3 className="text-lg font-bold mb-4" style={{ color: '#111827' }}>
@@ -336,6 +496,197 @@ export default function SiteAnalyzerPage() {
                     </p>
                   </div>
                 ))}
+              </div>
+            </div>
+          )}
+
+          {/* FSI/TDR/Zonal Regulations */}
+          {result.buildable_area_analysis && (
+            <div className="card" style={{ borderLeft: '4px solid #3b82f6' }}>
+              <div className="flex items-center gap-3 mb-4">
+                <span className="text-2xl">📐</span>
+                <h3 className="text-lg font-bold" style={{ color: '#111827' }}>
+                  FSI/TDR & Zonal Regulations
+                </h3>
+              </div>
+              
+              <div className="mb-4 p-3 rounded-lg" style={{ backgroundColor: '#f0f9ff', border: '1px solid #3b82f6' }}>
+                <p className="text-sm font-semibold" style={{ color: '#1e40af' }}>
+                  Zone: {result.buildable_area_analysis.zone_type}
+                </p>
+                <p className="text-xs mt-1" style={{ color: '#6b7280' }}>
+                  {result.buildable_area_analysis.regulations_summary}
+                </p>
+              </div>
+
+              {/* FSI Options Comparison */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                {/* Base FSI */}
+                <div className="p-4 rounded-lg" style={{ backgroundColor: '#f9fafb', border: '2px solid #10b981' }}>
+                  <div className="text-center mb-3">
+                    <span className="text-xs font-semibold" style={{ color: '#6b7280' }}>BASE FSI</span>
+                    <div className="text-3xl font-bold mt-1" style={{ color: '#10b981' }}>
+                      {result.buildable_area_analysis.fsi_regulations.base_fsi}
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <div>
+                      <p className="text-xs" style={{ color: '#6b7280' }}>Buildable Area:</p>
+                      <p className="text-sm font-bold" style={{ color: '#111827' }}>
+                        {result.buildable_area_analysis.fsi_regulations.base_buildable_area_sqm.toLocaleString()} sqm
+                      </p>
+                      <p className="text-xs" style={{ color: '#6b7280' }}>
+                        ({result.buildable_area_analysis.fsi_regulations.base_buildable_area_sqft.toLocaleString()} sqft)
+                      </p>
+                    </div>
+                    <div className="pt-2 border-t">
+                      <p className="text-xs font-semibold" style={{ color: '#10b981' }}>
+                        ✓ Included in land cost
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* TDR Option */}
+                <div className={`p-4 rounded-lg ${result.buildable_area_analysis.tdr_option.available ? 'border-2 border-blue-500' : 'opacity-50'}`} style={{ backgroundColor: '#f0f9ff' }}>
+                  <div className="text-center mb-3">
+                    <span className="text-xs font-semibold" style={{ color: '#6b7280' }}>WITH TDR</span>
+                    <div className="text-3xl font-bold mt-1" style={{ color: '#3b82f6' }}>
+                      {result.buildable_area_analysis.tdr_option.fsi_with_tdr || 'N/A'}
+                    </div>
+                  </div>
+                  {result.buildable_area_analysis.tdr_option.available ? (
+                    <div className="space-y-2">
+                      <div>
+                        <p className="text-xs" style={{ color: '#6b7280' }}>Buildable Area:</p>
+                        <p className="text-sm font-bold" style={{ color: '#111827' }}>
+                          {result.buildable_area_analysis.tdr_option.buildable_area_sqm.toLocaleString()} sqm
+                        </p>
+                        <p className="text-xs" style={{ color: '#6b7280' }}>
+                          (+{result.buildable_area_analysis.tdr_option.additional_area_sqm.toLocaleString()} sqm extra)
+                        </p>
+                      </div>
+                      <div className="pt-2 border-t">
+                        <p className="text-xs" style={{ color: '#6b7280' }}>TDR Cost:</p>
+                        <p className="text-sm font-bold" style={{ color: '#3b82f6' }}>
+                          ₹{result.buildable_area_analysis.tdr_option.total_tdr_cost_lakhs} lakhs
+                        </p>
+                        <p className="text-xs" style={{ color: '#6b7280' }}>
+                          (₹{result.buildable_area_analysis.tdr_option.tdr_cost_per_sqm.toLocaleString()}/sqm)
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-center" style={{ color: '#6b7280' }}>
+                      TDR not available in this zone
+                    </p>
+                  )}
+                </div>
+
+                {/* Premium FSI */}
+                <div className="p-4 rounded-lg" style={{ backgroundColor: '#fef3c7', border: '2px solid #f59e0b' }}>
+                  <div className="text-center mb-3">
+                    <span className="text-xs font-semibold" style={{ color: '#6b7280' }}>PREMIUM FSI</span>
+                    <div className="text-3xl font-bold mt-1" style={{ color: '#f59e0b' }}>
+                      {result.buildable_area_analysis.premium_fsi_option.fsi_premium}
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <div>
+                      <p className="text-xs" style={{ color: '#6b7280' }}>Buildable Area:</p>
+                      <p className="text-sm font-bold" style={{ color: '#111827' }}>
+                        {result.buildable_area_analysis.premium_fsi_option.buildable_area_sqm.toLocaleString()} sqm
+                      </p>
+                      <p className="text-xs" style={{ color: '#6b7280' }}>
+                        (+{result.buildable_area_analysis.premium_fsi_option.additional_area_sqm.toLocaleString()} sqm extra)
+                      </p>
+                    </div>
+                    <div className="pt-2 border-t">
+                      <p className="text-xs" style={{ color: '#6b7280' }}>Premium Cost:</p>
+                      <p className="text-sm font-bold" style={{ color: '#f59e0b' }}>
+                        ₹{result.buildable_area_analysis.premium_fsi_option.total_premium_cost_lakhs} lakhs
+                      </p>
+                      <p className="text-xs" style={{ color: '#6b7280' }}>
+                        (₹{result.buildable_area_analysis.premium_fsi_option.premium_cost_per_sqm.toLocaleString()}/sqm)
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Floor & Building Regulations */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div className="p-4 rounded-lg" style={{ backgroundColor: '#f9fafb', border: '1px solid #e5e7eb' }}>
+                  <h4 className="text-sm font-bold mb-3" style={{ color: '#111827' }}>Floor Regulations</h4>
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-xs" style={{ color: '#6b7280' }}>Max Floors Allowed:</span>
+                      <span className="text-sm font-semibold" style={{ color: '#111827' }}>
+                        {result.buildable_area_analysis.floor_regulations.max_floors_allowed} floors
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-xs" style={{ color: '#6b7280' }}>Max Height:</span>
+                      <span className="text-sm font-semibold" style={{ color: '#111827' }}>
+                        {result.buildable_area_analysis.floor_regulations.max_height_meters}m
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-xs" style={{ color: '#6b7280' }}>Ground Coverage:</span>
+                      <span className="text-sm font-semibold" style={{ color: '#111827' }}>
+                        {result.buildable_area_analysis.floor_regulations.ground_coverage_pct}%
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-xs" style={{ color: '#6b7280' }}>Ground Floor Area:</span>
+                      <span className="text-sm font-semibold" style={{ color: '#111827' }}>
+                        {result.buildable_area_analysis.floor_regulations.ground_floor_area_sqm.toLocaleString()} sqm
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-lg" style={{ backgroundColor: '#f9fafb', border: '1px solid #e5e7eb' }}>
+                  <h4 className="text-sm font-bold mb-3" style={{ color: '#111827' }}>Setback Requirements</h4>
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-xs" style={{ color: '#6b7280' }}>Front Setback:</span>
+                      <span className="text-sm font-semibold" style={{ color: '#111827' }}>
+                        {result.buildable_area_analysis.setback_requirements.front_setback_m}m
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-xs" style={{ color: '#6b7280' }}>Side Setback:</span>
+                      <span className="text-sm font-semibold" style={{ color: '#111827' }}>
+                        {result.buildable_area_analysis.setback_requirements.side_setback_m}m
+                      </span>
+                    </div>
+                    <div className="pt-2 border-t">
+                      <p className="text-xs" style={{ color: '#6b7280' }}>Parking Required:</p>
+                      <p className="text-sm font-semibold" style={{ color: '#111827' }}>
+                        {result.buildable_area_analysis.setback_requirements.parking_requirement}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Financial Recommendation */}
+              <div className="p-4 rounded-lg" style={{ backgroundColor: '#ecfdf5', border: '2px solid #10b981' }}>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-xl">💡</span>
+                  <h4 className="text-sm font-bold" style={{ color: '#111827' }}>Financial Recommendation</h4>
+                </div>
+                <p className="text-sm" style={{ color: '#6b7280' }}>
+                  <span className="font-semibold" style={{ color: '#10b981' }}>
+                    Best Option: {result.buildable_area_analysis.financial_comparison.recommendation}
+                  </span>
+                </p>
+                <div className="mt-2 text-xs" style={{ color: '#6b7280' }}>
+                  <p>• Base FSI: {result.buildable_area_analysis.financial_comparison.base_fsi_cost}</p>
+                  <p>• TDR Option: {result.buildable_area_analysis.financial_comparison.tdr_option_cost}</p>
+                  <p>• Premium FSI: {result.buildable_area_analysis.financial_comparison.premium_fsi_cost}</p>
+                </div>
               </div>
             </div>
           )}

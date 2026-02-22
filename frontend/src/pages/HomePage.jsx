@@ -1,72 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 export default function HomePage() {
   const navigate = useNavigate();
-
-  useEffect(() => {
-    // Load scripts directly in head
-    const scripts = [
-      'https://www.amcharts.com/lib/4/core.js',
-      'https://www.amcharts.com/lib/4/maps.js',
-      'https://www.amcharts.com/lib/4/geodata/worldLow.js',
-      'https://www.amcharts.com/lib/4/themes/animated.js'
-    ];
-
-    let loadedCount = 0;
-
-    scripts.forEach(src => {
-      const script = document.createElement('script');
-      script.src = src;
-      script.onload = () => {
-        loadedCount++;
-        if (loadedCount === scripts.length) {
-          setTimeout(initGlobe, 100);
-        }
-      };
-      document.head.appendChild(script);
-    });
-
-    function initGlobe() {
-      if (!window.am4core || !window.am4maps) return;
-
-      window.am4core.useTheme(window.am4themes_animated);
-
-      const chart = window.am4core.create("chartdiv", window.am4maps.MapChart);
-      chart.geodata = window.am4geodata_worldLow;
-      chart.projection = new window.am4maps.projections.Orthographic();
-      chart.panBehavior = "rotateLongLat";
-      chart.deltaLatitude = -20;
-      chart.padding(20, 20, 20, 20);
-
-      const polygonSeries = chart.series.push(new window.am4maps.MapPolygonSeries());
-      polygonSeries.useGeodata = true;
-
-      const polygonTemplate = polygonSeries.mapPolygons.template;
-      polygonTemplate.tooltipText = "{name}";
-      polygonTemplate.fill = window.am4core.color("#3a9d5d");
-      polygonTemplate.stroke = window.am4core.color("#2d7a47");
-      polygonTemplate.strokeWidth = 0.5;
-
-      const graticuleSeries = chart.series.push(new window.am4maps.GraticuleSeries());
-      graticuleSeries.mapLines.template.line.stroke = window.am4core.color("#ffffff");
-      graticuleSeries.mapLines.template.line.strokeOpacity = 0.08;
-      graticuleSeries.fitExtent = false;
-
-      chart.backgroundSeries.mapPolygons.template.polygon.fillOpacity = 1;
-      chart.backgroundSeries.mapPolygons.template.polygon.fill = window.am4core.color("#1e90ff");
-
-      const hs = polygonTemplate.states.create("hover");
-      hs.properties.fill = chart.colors.getIndex(0).brighten(-0.5);
-
-      setTimeout(function() {
-        chart.animate({
-          property: "deltaLongitude",
-          to: 100000
-        }, 20000000);
-      }, 3000);
-    }
-  }, []);
 
   return (
     <div className="min-h-screen" style={{ background: '#ffffff' }}>
@@ -126,18 +62,9 @@ export default function HomePage() {
             </button>
           </div>
 
-          {/* Right: Globe */}
+          {/* Right: Animated Globe */}
           <div className="order-2 flex justify-center lg:justify-end">
-            <div 
-              id="chartdiv" 
-              style={{ 
-                width: '100%',
-                maxWidth: '500px',
-                height: '500px',
-                backgroundColor: '#ffffff',
-                borderRadius: '16px'
-              }}
-            ></div>
+            <AnimatedGlobe />
           </div>
         </div>
       </div>
@@ -163,7 +90,166 @@ export default function HomePage() {
   );
 }
 
-// Feature Card Component - Clean without icon boxes
+// Optimized Animated Globe Component
+function AnimatedGlobe() {
+  return (
+    <div style={{ 
+      width: '500px', 
+      height: '500px', 
+      position: 'relative',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center'
+    }}>
+      {/* Globe Container */}
+      <div style={{
+        width: '400px',
+        height: '400px',
+        borderRadius: '50%',
+        background: 'linear-gradient(135deg, #1e90ff 0%, #4169e1 50%, #0066cc 100%)',
+        position: 'relative',
+        overflow: 'hidden',
+        boxShadow: '0 20px 60px rgba(30, 144, 255, 0.4), inset 0 0 80px rgba(0, 0, 0, 0.2)',
+        willChange: 'transform',
+        transform: 'translateZ(0)'
+      }}>
+        {/* Continents - Simplified shapes */}
+        <div style={{
+          position: 'absolute',
+          width: '100%',
+          height: '100%',
+          animation: 'rotate 40s linear infinite',
+          willChange: 'transform',
+          transform: 'translateZ(0)'
+        }}>
+          {/* India highlight */}
+          <div style={{
+            position: 'absolute',
+            top: '35%',
+            left: '60%',
+            width: '40px',
+            height: '60px',
+            background: '#10b981',
+            borderRadius: '40% 60% 60% 40% / 60% 40% 60% 40%',
+            boxShadow: '0 0 20px rgba(16, 185, 129, 0.8)',
+            animation: 'pulse 3s ease-in-out infinite',
+            willChange: 'opacity'
+          }} />
+          
+          {/* Other landmasses */}
+          <div style={{
+            position: 'absolute',
+            top: '20%',
+            left: '20%',
+            width: '80px',
+            height: '50px',
+            background: '#3a9d5d',
+            borderRadius: '50% 40% 60% 50%',
+            opacity: 0.9
+          }} />
+          
+          <div style={{
+            position: 'absolute',
+            top: '50%',
+            left: '10%',
+            width: '60px',
+            height: '70px',
+            background: '#3a9d5d',
+            borderRadius: '60% 40% 50% 60%',
+            opacity: 0.9
+          }} />
+          
+          <div style={{
+            position: 'absolute',
+            top: '30%',
+            right: '15%',
+            width: '70px',
+            height: '40px',
+            background: '#3a9d5d',
+            borderRadius: '40% 60% 50% 50%',
+            opacity: 0.9
+          }} />
+        </div>
+
+        {/* Latitude lines - reduced for performance */}
+        {[25, 50, 75].map((top, i) => (
+          <div key={i} style={{
+            position: 'absolute',
+            top: `${top}%`,
+            left: '5%',
+            right: '5%',
+            height: '1px',
+            background: 'rgba(255, 255, 255, 0.15)',
+            borderRadius: '50%'
+          }} />
+        ))}
+
+        {/* Longitude lines - reduced for performance */}
+        {[25, 50, 75].map((left, i) => (
+          <div key={i} style={{
+            position: 'absolute',
+            top: '5%',
+            bottom: '5%',
+            left: `${left}%`,
+            width: '1px',
+            background: 'rgba(255, 255, 255, 0.15)',
+            borderRadius: '50%'
+          }} />
+        ))}
+
+        {/* Glow effect */}
+        <div style={{
+          position: 'absolute',
+          top: '-10%',
+          left: '-10%',
+          width: '60%',
+          height: '60%',
+          background: 'radial-gradient(circle, rgba(255, 255, 255, 0.3) 0%, transparent 70%)',
+          borderRadius: '50%'
+        }} />
+      </div>
+
+      {/* Orbiting dots - reduced to 2 for performance */}
+      <div style={{
+        position: 'absolute',
+        width: '450px',
+        height: '450px',
+        animation: 'rotate 25s linear infinite',
+        willChange: 'transform',
+        transform: 'translateZ(0)'
+      }}>
+        {[0, 180].map((deg, i) => (
+          <div key={i} style={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            width: '10px',
+            height: '10px',
+            background: '#10b981',
+            borderRadius: '50%',
+            transform: `rotate(${deg}deg) translateX(225px)`,
+            boxShadow: '0 0 12px rgba(16, 185, 129, 0.8)',
+            willChange: 'opacity'
+          }} />
+        ))}
+      </div>
+
+      <style>{`
+        @keyframes rotate {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.7; }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+// Feature Card Component
 function FeatureCard({ title, description }) {
   const [isHovered, setIsHovered] = useState(false);
 

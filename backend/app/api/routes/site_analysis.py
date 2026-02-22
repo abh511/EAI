@@ -12,6 +12,175 @@ from loguru import logger
 
 router = APIRouter()
 
+# FSI/TDR/Zonal Regulations Database (Pune & Mumbai)
+# Based on Development Control Regulations (DCR) 2034 for Mumbai and Pune Municipal Corporation rules
+ZONAL_REGULATIONS = {
+    "Pune": {
+        "Hadapsar": {
+            "zone_type": "Residential-Commercial Mixed",
+            "fsi_base": 1.5,
+            "fsi_with_tdr": 2.0,
+            "fsi_premium": 2.5,
+            "max_floors": 15,
+            "ground_coverage": 50,  # percentage
+            "setback_front_m": 3.0,
+            "setback_side_m": 1.5,
+            "parking_required": "1 space per 100 sqm",
+            "height_limit_m": 45,
+            "tdr_available": True,
+            "tdr_rate_per_sqm": 8500,
+            "premium_fsi_cost_per_sqm": 12000,
+            "regulations": "PMC DCR 2017 - Zone R2 (Residential with commercial on ground floor allowed)"
+        },
+        "Kothrud": {
+            "zone_type": "Residential",
+            "fsi_base": 1.2,
+            "fsi_with_tdr": 1.8,
+            "fsi_premium": 2.2,
+            "max_floors": 12,
+            "ground_coverage": 45,
+            "setback_front_m": 3.0,
+            "setback_side_m": 2.0,
+            "parking_required": "1 space per 80 sqm",
+            "height_limit_m": 36,
+            "tdr_available": True,
+            "tdr_rate_per_sqm": 9000,
+            "premium_fsi_cost_per_sqm": 13000,
+            "regulations": "PMC DCR 2017 - Zone R1 (Purely residential, no commercial activity)"
+        },
+        "Hinjewadi": {
+            "zone_type": "IT/Commercial",
+            "fsi_base": 2.0,
+            "fsi_with_tdr": 2.5,
+            "fsi_premium": 3.0,
+            "max_floors": 20,
+            "ground_coverage": 40,
+            "setback_front_m": 6.0,
+            "setback_side_m": 3.0,
+            "parking_required": "1 space per 50 sqm",
+            "height_limit_m": 60,
+            "tdr_available": True,
+            "tdr_rate_per_sqm": 7000,
+            "premium_fsi_cost_per_sqm": 10000,
+            "regulations": "MIDC Special Economic Zone - IT Park regulations, 24x7 operations allowed"
+        },
+        "Shivajinagar": {
+            "zone_type": "Commercial",
+            "fsi_base": 1.8,
+            "fsi_with_tdr": 2.3,
+            "fsi_premium": 2.8,
+            "max_floors": 18,
+            "ground_coverage": 50,
+            "setback_front_m": 4.0,
+            "setback_side_m": 2.0,
+            "parking_required": "1 space per 60 sqm",
+            "height_limit_m": 54,
+            "tdr_available": True,
+            "tdr_rate_per_sqm": 11000,
+            "premium_fsi_cost_per_sqm": 15000,
+            "regulations": "PMC DCR 2017 - Zone C1 (Commercial core, high-density allowed)"
+        },
+        "Pimpri": {
+            "zone_type": "Industrial-Residential",
+            "fsi_base": 1.0,
+            "fsi_with_tdr": 1.5,
+            "fsi_premium": 1.8,
+            "max_floors": 10,
+            "ground_coverage": 55,
+            "setback_front_m": 5.0,
+            "setback_side_m": 3.0,
+            "parking_required": "1 space per 120 sqm",
+            "height_limit_m": 30,
+            "tdr_available": False,
+            "tdr_rate_per_sqm": 0,
+            "premium_fsi_cost_per_sqm": 8000,
+            "regulations": "PCMC Industrial Zone - Restrictions on residential construction near factories"
+        },
+    },
+    "Mumbai": {
+        "Andheri": {
+            "zone_type": "Residential-Commercial Mixed",
+            "fsi_base": 1.33,
+            "fsi_with_tdr": 2.0,
+            "fsi_premium": 2.5,
+            "max_floors": 20,
+            "ground_coverage": 33,
+            "setback_front_m": 3.0,
+            "setback_side_m": 1.5,
+            "parking_required": "1 space per 65 sqm",
+            "height_limit_m": 60,
+            "tdr_available": True,
+            "tdr_rate_per_sqm": 25000,
+            "premium_fsi_cost_per_sqm": 35000,
+            "regulations": "MCGM DCR 2034 - Suburban Zone, Metro corridor benefits applicable"
+        },
+        "Bandra": {
+            "zone_type": "Residential Premium",
+            "fsi_base": 1.33,
+            "fsi_with_tdr": 2.0,
+            "fsi_premium": 2.5,
+            "max_floors": 25,
+            "ground_coverage": 33,
+            "setback_front_m": 4.0,
+            "setback_side_m": 2.0,
+            "parking_required": "1 space per 50 sqm",
+            "height_limit_m": 75,
+            "tdr_available": True,
+            "tdr_rate_per_sqm": 35000,
+            "premium_fsi_cost_per_sqm": 50000,
+            "regulations": "MCGM DCR 2034 - Premium residential zone, heritage restrictions in some pockets"
+        },
+        "Worli": {
+            "zone_type": "Commercial-Residential",
+            "fsi_base": 1.33,
+            "fsi_with_tdr": 2.5,
+            "fsi_premium": 3.0,
+            "max_floors": 30,
+            "ground_coverage": 33,
+            "setback_front_m": 5.0,
+            "setback_side_m": 3.0,
+            "parking_required": "1 space per 45 sqm",
+            "height_limit_m": 90,
+            "tdr_available": True,
+            "tdr_rate_per_sqm": 45000,
+            "premium_fsi_cost_per_sqm": 60000,
+            "regulations": "MCGM DCR 2034 - Island City premium zone, CRZ regulations apply near coast"
+        },
+        "Thane": {
+            "zone_type": "Residential",
+            "fsi_base": 1.2,
+            "fsi_with_tdr": 1.8,
+            "fsi_premium": 2.2,
+            "max_floors": 18,
+            "ground_coverage": 40,
+            "setback_front_m": 3.0,
+            "setback_side_m": 1.5,
+            "parking_required": "1 space per 70 sqm",
+            "height_limit_m": 54,
+            "tdr_available": True,
+            "tdr_rate_per_sqm": 18000,
+            "premium_fsi_cost_per_sqm": 25000,
+            "regulations": "TMC Development Plan 2024 - Extended suburbs, metro connectivity benefits"
+        },
+        "Navi Mumbai": {
+            "zone_type": "Planned Township",
+            "fsi_base": 1.0,
+            "fsi_with_tdr": 1.5,
+            "fsi_premium": 2.0,
+            "max_floors": 15,
+            "ground_coverage": 35,
+            "setback_front_m": 4.0,
+            "setback_side_m": 2.0,
+            "parking_required": "1 space per 75 sqm",
+            "height_limit_m": 45,
+            "tdr_available": True,
+            "tdr_rate_per_sqm": 15000,
+            "premium_fsi_cost_per_sqm": 20000,
+            "regulations": "CIDCO Regulations - Planned development, strict adherence to master plan required"
+        },
+    }
+}
+
 # Construction type requirements
 CONSTRUCTION_REQUIREMENTS = {
     "hospital": {
@@ -169,6 +338,9 @@ async def analyze_site(
         risk_level = "low" if score >= 75 else "medium" if score >= 50 else "high" if score >= 30 else "critical"
         should_build = score >= 60  # Minimum threshold
         
+        # Calculate FSI/TDR/Zonal regulations
+        buildable_info = calculate_buildable_area(city, location, plot_area_sqm=1000)
+        
         return {
             "construction_type": requirements["name"],
             "icon": requirements["icon"],
@@ -184,6 +356,7 @@ async def analyze_site(
             "alternative_locations": alternatives,
             "predicted_impact": impact,
             "rationale": requirements["rationale"],
+            "buildable_area_analysis": buildable_info,
             "analyzed_at": datetime.now().isoformat(),
         }
     except HTTPException:
@@ -441,6 +614,107 @@ def predict_construction_impact(reading: dict, requirements: dict, construction_
         "estimated_affected_population": affected_population,
         "health_impact": health_impact,
         "mitigation_required": mitigations,
+    }
+
+def calculate_buildable_area(city: str, location: str, plot_area_sqm: float = 1000) -> dict:
+    """
+    Calculate buildable area based on FSI/TDR regulations
+    Default plot size: 1000 sqm (typical commercial plot)
+    """
+    # Get zonal regulations
+    zonal_data = ZONAL_REGULATIONS.get(city, {}).get(location, None)
+    
+    if not zonal_data:
+        # Default values if location not in database
+        zonal_data = {
+            "zone_type": "General Residential",
+            "fsi_base": 1.0,
+            "fsi_with_tdr": 1.5,
+            "fsi_premium": 2.0,
+            "max_floors": 10,
+            "ground_coverage": 40,
+            "setback_front_m": 3.0,
+            "setback_side_m": 1.5,
+            "parking_required": "1 space per 100 sqm",
+            "height_limit_m": 30,
+            "tdr_available": False,
+            "tdr_rate_per_sqm": 0,
+            "premium_fsi_cost_per_sqm": 10000,
+            "regulations": "Standard municipal regulations apply"
+        }
+    
+    # Calculate buildable areas
+    base_buildable = plot_area_sqm * zonal_data["fsi_base"]
+    tdr_buildable = plot_area_sqm * zonal_data["fsi_with_tdr"] if zonal_data["tdr_available"] else base_buildable
+    premium_buildable = plot_area_sqm * zonal_data["fsi_premium"]
+    
+    # Calculate costs
+    tdr_additional_area = tdr_buildable - base_buildable
+    tdr_total_cost = tdr_additional_area * zonal_data["tdr_rate_per_sqm"] if zonal_data["tdr_available"] else 0
+    
+    premium_additional_area = premium_buildable - base_buildable
+    premium_total_cost = premium_additional_area * zonal_data["premium_fsi_cost_per_sqm"]
+    
+    # Calculate ground floor area (based on ground coverage)
+    ground_floor_area = plot_area_sqm * (zonal_data["ground_coverage"] / 100)
+    
+    # Calculate typical floor area (after setbacks)
+    # Assuming square plot for simplicity
+    plot_side = plot_area_sqm ** 0.5
+    usable_side = plot_side - (zonal_data["setback_front_m"] + zonal_data["setback_side_m"])
+    typical_floor_area = usable_side ** 2
+    
+    # Calculate number of floors possible
+    max_floors_by_fsi = int(base_buildable / typical_floor_area)
+    actual_max_floors = min(max_floors_by_fsi, zonal_data["max_floors"])
+    
+    return {
+        "plot_area_sqm": plot_area_sqm,
+        "zone_type": zonal_data["zone_type"],
+        "fsi_regulations": {
+            "base_fsi": zonal_data["fsi_base"],
+            "base_buildable_area_sqm": round(base_buildable, 2),
+            "base_buildable_area_sqft": round(base_buildable * 10.764, 2),
+        },
+        "tdr_option": {
+            "available": zonal_data["tdr_available"],
+            "fsi_with_tdr": zonal_data["fsi_with_tdr"],
+            "buildable_area_sqm": round(tdr_buildable, 2) if zonal_data["tdr_available"] else 0,
+            "buildable_area_sqft": round(tdr_buildable * 10.764, 2) if zonal_data["tdr_available"] else 0,
+            "additional_area_sqm": round(tdr_additional_area, 2) if zonal_data["tdr_available"] else 0,
+            "tdr_cost_per_sqm": zonal_data["tdr_rate_per_sqm"],
+            "total_tdr_cost_inr": round(tdr_total_cost, 2) if zonal_data["tdr_available"] else 0,
+            "total_tdr_cost_lakhs": round(tdr_total_cost / 100000, 2) if zonal_data["tdr_available"] else 0,
+        },
+        "premium_fsi_option": {
+            "fsi_premium": zonal_data["fsi_premium"],
+            "buildable_area_sqm": round(premium_buildable, 2),
+            "buildable_area_sqft": round(premium_buildable * 10.764, 2),
+            "additional_area_sqm": round(premium_additional_area, 2),
+            "premium_cost_per_sqm": zonal_data["premium_fsi_cost_per_sqm"],
+            "total_premium_cost_inr": round(premium_total_cost, 2),
+            "total_premium_cost_lakhs": round(premium_total_cost / 100000, 2),
+        },
+        "floor_regulations": {
+            "max_floors_allowed": zonal_data["max_floors"],
+            "max_height_meters": zonal_data["height_limit_m"],
+            "ground_coverage_pct": zonal_data["ground_coverage"],
+            "ground_floor_area_sqm": round(ground_floor_area, 2),
+            "typical_floor_area_sqm": round(typical_floor_area, 2),
+            "estimated_floors_with_base_fsi": actual_max_floors,
+        },
+        "setback_requirements": {
+            "front_setback_m": zonal_data["setback_front_m"],
+            "side_setback_m": zonal_data["setback_side_m"],
+            "parking_requirement": zonal_data["parking_required"],
+        },
+        "regulations_summary": zonal_data["regulations"],
+        "financial_comparison": {
+            "base_fsi_cost": "₹0 (included in land cost)",
+            "tdr_option_cost": f"₹{round(tdr_total_cost / 100000, 2)} lakhs" if zonal_data["tdr_available"] else "Not available",
+            "premium_fsi_cost": f"₹{round(premium_total_cost / 100000, 2)} lakhs",
+            "recommendation": "TDR option" if zonal_data["tdr_available"] and tdr_total_cost < premium_total_cost else "Premium FSI option" if not zonal_data["tdr_available"] else "Base FSI sufficient"
+        }
     }
 
 def generate_recommendations(score: float, violations: list, construction_type: str, location: str, reading: dict) -> list:
