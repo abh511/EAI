@@ -12,15 +12,6 @@ export default function SiteAnalyzerPage() {
   const [selectedType, setSelectedType] = useState('');
   const [analyzing, setAnalyzing] = useState(false);
   const [result, setResult] = useState(null);
-  const [uploadedImage, setUploadedImage] = useState(null);
-  const [uploadedImageFile, setUploadedImageFile] = useState(null);
-  const [matchedAfterImage, setMatchedAfterImage] = useState(null);
-  const [isDragging, setIsDragging] = useState(false);
-  
-  // Image loading stages: 'loading' -> 'blurred' -> 'clear' -> 'error'
-  const [imageLoadingStage, setImageLoadingStage] = useState(null);
-  const [blurAmount, setBlurAmount] = useState(20);
-  const [imageGenerationError, setImageGenerationError] = useState(false);
 
   useEffect(() => {
     if (!city || !location) {
@@ -48,128 +39,23 @@ export default function SiteAnalyzerPage() {
       toast.error('Please select a construction type');
       return;
     }
-
     setAnalyzing(true);
     setResult(null);
-    setMatchedAfterImage(null);
-    setImageLoadingStage(null);
-    setBlurAmount(20);
-    setImageGenerationError(false);
-
     try {
-      // First, analyze the site
       const res = await api.get('/api/site-analysis/analyze', {
         params: { city, location, construction_type: selectedType }
       });
       setResult(res.data);
-      
-      // If image was uploaded, try to match it with staged loading effect
-      if (uploadedImageFile) {
-        try {
-          // Stage 1: Show loading (0-3 seconds)
-          setImageLoadingStage('loading');
-          
-          const formData = new FormData();
-          formData.append('files', uploadedImageFile);
-          
-          // Pass construction type to get the correct after image
-          const imageRes = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/image-simulator/match-images?construction_type=${selectedType}`, {
-            method: 'POST',
-            body: formData,
-          });
-          
-          const imageData = await imageRes.json();
-          if (imageData.total_matched > 0 && imageData.results[0].status === 'matched') {
-            const afterImageUrl = `${import.meta.env.VITE_API_BASE_URL}${imageData.results[0].after_image_url}`;
-            
-            // Wait 3 seconds, then show blurred image
-            setTimeout(() => {
-              setMatchedAfterImage(afterImageUrl);
-              setImageLoadingStage('blurred');
-              
-              // Stage 2: Show blurred image (3-5 seconds)
-              setTimeout(() => {
-                setImageLoadingStage('clearing');
-                
-                // Stage 3: Gradually clear the blur (5-7 seconds)
-                const clearingInterval = setInterval(() => {
-                  setBlurAmount(prev => {
-                    const newBlur = prev - 1;
-                    if (newBlur <= 0) {
-                      clearInterval(clearingInterval);
-                      setImageLoadingStage('clear');
-                      return 0;
-                    }
-                    return newBlur;
-                  });
-                }, 100); // Update every 100ms for smooth transition (20 steps = 2 seconds)
-              }, 2000); // 2 seconds of blur
-            }, 3000); // 3 seconds of loading
-          } else {
-            // No match found - show realistic token limit error after loading stage
-            setTimeout(() => {
-              setImageLoadingStage('error');
-              setImageGenerationError(true);
-            }, 3000); // Show error after 3 seconds of loading
-          }
-        } catch (imgErr) {
-          console.error('Image matching failed:', imgErr);
-          setImageLoadingStage(null);
-        }
-      }
-      
       if (res.data.should_build) {
         toast.success('Site analysis complete!');
       } else {
         toast.error('Site not recommended for this construction');
       }
     } catch (err) {
-      toast.error(err.response?.data?.detail || 'Analysis failed');
+      toast.error(err.message || 'Analysis failed');
     } finally {
       setAnalyzing(false);
     }
-  };
-
-  const handleImageUpload = (file) => {
-    if (file && file.type.startsWith('image/')) {
-      setUploadedImageFile(file);
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setUploadedImage(e.target.result);
-        toast.success('Site image uploaded successfully!');
-      };
-      reader.readAsDataURL(file);
-    } else {
-      toast.error('Please upload a valid image file');
-    }
-  };
-
-  const handleDrop = (e) => {
-    e.preventDefault();
-    setIsDragging(false);
-    const file = e.dataTransfer.files[0];
-    handleImageUpload(file);
-  };
-
-  const handleDragOver = (e) => {
-    e.preventDefault();
-    setIsDragging(true);
-  };
-
-  const handleDragLeave = () => {
-    setIsDragging(false);
-  };
-
-  const handleFileSelect = (e) => {
-    const file = e.target.files[0];
-    handleImageUpload(file);
-  };
-
-  const removeImage = () => {
-    setUploadedImage(null);
-    setUploadedImageFile(null);
-    setMatchedAfterImage(null);
-    toast.success('Image removed');
   };
 
   return (
@@ -182,7 +68,6 @@ export default function SiteAnalyzerPage() {
         <p className="text-sm mb-6" style={{ color: '#6b7280' }}>
           Choose the type of construction to analyze environmental suitability
         </p>
-
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {constructionTypes.map((type) => (
             <button
@@ -200,82 +85,6 @@ export default function SiteAnalyzerPage() {
             </button>
           ))}
         </div>
-      </div>
-
-      {/* Image Upload Section */}
-      <div className="card mb-6">
-        <h3 className="text-lg font-bold mb-2" style={{ color: '#111827' }}>
-          Upload Site Image (Optional)
-        </h3>
-        <p className="text-sm mb-4" style={{ color: '#6b7280' }}>
-          Add a photo of the site for visual reference
-        </p>
-
-        {!uploadedImage ? (
-          <div
-            onDrop={handleDrop}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            className="border-2 border-dashed rounded-xl p-8 text-center transition-all cursor-pointer"
-            style={{
-              borderColor: isDragging ? '#10b981' : '#e5e7eb',
-              backgroundColor: isDragging ? 'rgba(16, 185, 129, 0.05)' : '#f9fafb'
-            }}
-          >
-            <input
-              type="file"
-              id="imageUpload"
-              accept="image/*"
-              onChange={handleFileSelect}
-              className="hidden"
-            />
-            <label htmlFor="imageUpload" className="cursor-pointer">
-              <div className="text-5xl mb-4">📸</div>
-              <p className="text-lg font-semibold mb-2" style={{ color: '#111827' }}>
-                {isDragging ? 'Drop image here' : 'Drag & drop site image'}
-              </p>
-              <p className="text-sm mb-4" style={{ color: '#6b7280' }}>
-                or click to browse
-              </p>
-              <button
-                type="button"
-                onClick={() => document.getElementById('imageUpload').click()}
-                className="px-6 py-2 rounded-lg font-semibold transition-all"
-                style={{
-                  backgroundColor: '#10b981',
-                  color: '#ffffff',
-                  border: 'none'
-                }}
-              >
-                Browse Files
-              </button>
-              <p className="text-xs mt-3" style={{ color: '#9ca3af' }}>
-                Supports: JPG, PNG, GIF (Max 5MB)
-              </p>
-            </label>
-          </div>
-        ) : (
-          <div className="relative rounded-xl overflow-hidden flex items-center justify-center" style={{ border: '2px solid #10b981', height: '256px', backgroundColor: '#f9fafb' }}>
-            <img
-              src={uploadedImage}
-              alt="Uploaded site"
-              className="max-w-full max-h-full object-contain"
-            />
-            <button
-              onClick={removeImage}
-              className="absolute top-4 right-4 w-10 h-10 rounded-full flex items-center justify-center transition-all"
-              style={{
-                backgroundColor: 'rgba(220, 38, 38, 0.9)',
-                color: '#ffffff'
-              }}
-            >
-              <i className="fas fa-times"></i>
-            </button>
-            <div className="absolute bottom-0 left-0 right-0 p-4" style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.7), transparent)' }}>
-              <p className="text-white text-sm font-semibold">Site Image Uploaded ✓</p>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Analyze Button */}
@@ -309,11 +118,7 @@ export default function SiteAnalyzerPage() {
       {result && (
         <div className="space-y-6">
           {/* Decision Summary */}
-          <div className={`card ${
-            result.should_build 
-              ? 'border-l-4 border-green-500' 
-              : 'border-l-4 border-red-500'
-          }`}>
+          <div className={`card ${result.should_build ? 'border-l-4 border-green-500' : 'border-l-4 border-red-500'}`}>
             <div className="flex items-start justify-between">
               <div className="flex-1">
                 <div className="flex items-center gap-3 mb-3">
@@ -325,117 +130,23 @@ export default function SiteAnalyzerPage() {
                 <p className="text-lg mb-4" style={{ color: '#4b5563' }}>{result.decision_summary}</p>
               </div>
               <div className="text-right ml-6">
-                <div className="text-5xl font-bold mb-2" style={{ 
-                  color: result.should_build ? '#10b981' : '#dc2626' 
-                }}>
+                <div className="text-5xl font-bold mb-2" style={{ color: result.should_build ? '#10b981' : '#dc2626' }}>
                   {result.suitability_score}/100
                 </div>
                 <div className="inline-block px-4 py-2 rounded-lg text-sm font-semibold" style={{
                   backgroundColor: result.risk_level === 'low' ? 'rgba(16, 185, 129, 0.1)' :
-                                 result.risk_level === 'medium' ? 'rgba(245, 158, 11, 0.1)' :
-                                 'rgba(220, 38, 38, 0.1)',
+                                   result.risk_level === 'medium' ? 'rgba(245, 158, 11, 0.1)' :
+                                   'rgba(220, 38, 38, 0.1)',
                   color: result.risk_level === 'low' ? '#10b981' :
-                        result.risk_level === 'medium' ? '#f59e0b' :
-                        '#dc2626',
+                         result.risk_level === 'medium' ? '#f59e0b' : '#dc2626',
                   border: `1px solid ${result.risk_level === 'low' ? '#10b981' :
-                                      result.risk_level === 'medium' ? '#f59e0b' :
-                                      '#dc2626'}`
+                                       result.risk_level === 'medium' ? '#f59e0b' : '#dc2626'}`
                 }}>
                   {result.risk_level.toUpperCase()} RISK
                 </div>
               </div>
             </div>
           </div>
-
-          {/* Before/After Image Comparison */}
-          {uploadedImage && (imageLoadingStage || matchedAfterImage) && (
-            <div className="card">
-              <h3 className="text-lg font-bold mb-4" style={{ color: '#111827' }}>
-                Environmental Impact Visualization
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Before Image */}
-                <div>
-                  <div className="text-sm font-semibold mb-2" style={{ color: '#6b7280' }}>
-                    BEFORE (Uploaded Site Image)
-                  </div>
-                  <div className="rounded-lg overflow-hidden flex items-center justify-center" style={{ border: '3px solid #10b981', height: '256px', backgroundColor: '#f9fafb' }}>
-                    <img 
-                      src={uploadedImage} 
-                      alt="Before - Uploaded Site" 
-                      className="max-w-full max-h-full object-contain"
-                    />
-                  </div>
-                </div>
-
-                {/* After Image with Staged Loading */}
-                <div>
-                  <div className="text-sm font-semibold mb-2" style={{ color: '#6b7280' }}>
-                    AFTER (Predicted Environmental Impact)
-                  </div>
-                  <div className="rounded-lg overflow-hidden relative" style={{ border: '3px solid #059669', height: '256px' }}>
-                    {/* Stage 1: Loading (0-3 seconds) */}
-                    {imageLoadingStage === 'loading' && (
-                      <div className="w-full h-full flex flex-col items-center justify-center" style={{ backgroundColor: '#f3f4f6' }}>
-                        <div className="relative mb-4">
-                          <i className="fas fa-spinner fa-spin text-5xl" style={{ color: '#10b981' }}></i>
-                        </div>
-                        <p className="text-sm font-semibold" style={{ color: '#6b7280' }}>
-                          Generating environmental impact prediction...
-                        </p>
-                        <div className="mt-3 flex gap-1">
-                          <div className="w-2 h-2 rounded-full animate-bounce" style={{ backgroundColor: '#10b981', animationDelay: '0ms' }}></div>
-                          <div className="w-2 h-2 rounded-full animate-bounce" style={{ backgroundColor: '#10b981', animationDelay: '150ms' }}></div>
-                          <div className="w-2 h-2 rounded-full animate-bounce" style={{ backgroundColor: '#10b981', animationDelay: '300ms' }}></div>
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* Error State: Token Limit Exceeded */}
-                    {imageLoadingStage === 'error' && imageGenerationError && (
-                      <div className="w-full h-full flex flex-col items-center justify-center p-6" style={{ backgroundColor: '#fef2f2' }}>
-                        <div className="mb-4">
-                          <i className="fas fa-exclamation-triangle text-5xl" style={{ color: '#dc2626' }}></i>
-                        </div>
-                        <p className="text-sm font-bold mb-2 text-center" style={{ color: '#dc2626' }}>
-                          AI Image Generation Failed
-                        </p>
-                        <p className="text-xs text-center mb-3" style={{ color: '#991b1b' }}>
-                          Token limit exceeded
-                        </p>
-                        <div className="text-xs text-center px-4" style={{ color: '#6b7280', lineHeight: '1.5' }}>
-                          The environmental impact prediction service has reached its daily processing quota. Please try again later or contact support.
-                        </div>
-                        <div className="mt-4 px-3 py-1 rounded text-xs" style={{ backgroundColor: '#fee2e2', color: '#991b1b', border: '1px solid #fca5a5' }}>
-                          Error Code: TOKEN_LIMIT_EXCEEDED
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* Stage 2 & 3: Blurred -> Clear (3-7 seconds) */}
-                    {(imageLoadingStage === 'blurred' || imageLoadingStage === 'clearing' || imageLoadingStage === 'clear') && matchedAfterImage && (
-                      <div className="w-full h-full flex items-center justify-center" style={{ backgroundColor: '#f9fafb' }}>
-                        <img 
-                          src={matchedAfterImage} 
-                          alt="After - Environmental Impact" 
-                          className="max-w-full max-h-full object-contain"
-                          style={{
-                            filter: `blur(${blurAmount}px)`,
-                            transition: imageLoadingStage === 'clearing' ? 'filter 0.1s ease-out' : 'none'
-                          }}
-                        />
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-              <p className="text-sm mt-4 text-center" style={{ color: '#6b7280' }}>
-                {imageLoadingStage === 'loading' && 'AI is analyzing the site and generating impact prediction...'}
-                {imageLoadingStage === 'blurred' && 'Processing image details...'}
-                {(imageLoadingStage === 'clearing' || imageLoadingStage === 'clear') && 'The after image shows the predicted environmental impact based on similar construction projects'}
-              </p>
-            </div>
-          )}
 
           {/* Environmental Checks */}
           <div className="card">
@@ -456,9 +167,7 @@ export default function SiteAnalyzerPage() {
                     <span className="font-semibold capitalize" style={{ color: '#111827' }}>
                       {key.replace(/_/g, ' ')}
                     </span>
-                    <span className="text-2xl">
-                      {check.status === 'pass' ? '✅' : '❌'}
-                    </span>
+                    <span className="text-2xl">{check.status === 'pass' ? '✅' : '❌'}</span>
                   </div>
                   <p className="text-sm" style={{ color: '#6b7280' }}>{check.message}</p>
                 </div>
@@ -474,17 +183,12 @@ export default function SiteAnalyzerPage() {
               </h3>
               <div className="space-y-3">
                 {result.violations.map((violation, idx) => (
-                  <div
-                    key={idx}
-                    className="p-4 rounded-lg"
-                    style={{ backgroundColor: '#fef3c7', border: '1px solid #f59e0b' }}
-                  >
+                  <div key={idx} className="p-4 rounded-lg" style={{ backgroundColor: '#fef3c7', border: '1px solid #f59e0b' }}>
                     <div className="flex items-start justify-between mb-2">
                       <span className="font-semibold" style={{ color: '#111827' }}>{violation.factor}</span>
                       <span className="px-2 py-1 rounded text-xs font-semibold" style={{
                         backgroundColor: violation.severity === 'critical' ? '#dc2626' :
-                                       violation.severity === 'high' ? '#f97316' :
-                                       '#f59e0b',
+                                         violation.severity === 'high' ? '#f97316' : '#f59e0b',
                         color: '#ffffff'
                       }}>
                         {violation.severity.toUpperCase()}
@@ -505,11 +209,8 @@ export default function SiteAnalyzerPage() {
             <div className="card" style={{ borderLeft: '4px solid #3b82f6' }}>
               <div className="flex items-center gap-3 mb-4">
                 <span className="text-2xl">📐</span>
-                <h3 className="text-lg font-bold" style={{ color: '#111827' }}>
-                  FSI/TDR & Zonal Regulations
-                </h3>
+                <h3 className="text-lg font-bold" style={{ color: '#111827' }}>FSI/TDR & Zonal Regulations</h3>
               </div>
-              
               <div className="mb-4 p-3 rounded-lg" style={{ backgroundColor: '#f0f9ff', border: '1px solid #3b82f6' }}>
                 <p className="text-sm font-semibold" style={{ color: '#1e40af' }}>
                   Zone: {result.buildable_area_analysis.zone_type}
@@ -518,10 +219,7 @@ export default function SiteAnalyzerPage() {
                   {result.buildable_area_analysis.regulations_summary}
                 </p>
               </div>
-
-              {/* FSI Options Comparison */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                {/* Base FSI */}
                 <div className="p-4 rounded-lg" style={{ backgroundColor: '#f9fafb', border: '2px solid #10b981' }}>
                   <div className="text-center mb-3">
                     <span className="text-xs font-semibold" style={{ color: '#6b7280' }}>BASE FSI</span>
@@ -540,14 +238,10 @@ export default function SiteAnalyzerPage() {
                       </p>
                     </div>
                     <div className="pt-2 border-t">
-                      <p className="text-xs font-semibold" style={{ color: '#10b981' }}>
-                        ✓ Included in land cost
-                      </p>
+                      <p className="text-xs font-semibold" style={{ color: '#10b981' }}>✓ Included in land cost</p>
                     </div>
                   </div>
                 </div>
-
-                {/* TDR Option */}
                 <div className={`p-4 rounded-lg ${result.buildable_area_analysis.tdr_option.available ? 'border-2 border-blue-500' : 'opacity-50'}`} style={{ backgroundColor: '#f0f9ff' }}>
                   <div className="text-center mb-3">
                     <span className="text-xs font-semibold" style={{ color: '#6b7280' }}>WITH TDR</span>
@@ -577,13 +271,9 @@ export default function SiteAnalyzerPage() {
                       </div>
                     </div>
                   ) : (
-                    <p className="text-xs text-center" style={{ color: '#6b7280' }}>
-                      TDR not available in this zone
-                    </p>
+                    <p className="text-xs text-center" style={{ color: '#6b7280' }}>TDR not available in this zone</p>
                   )}
                 </div>
-
-                {/* Premium FSI */}
                 <div className="p-4 rounded-lg" style={{ backgroundColor: '#fef3c7', border: '2px solid #f59e0b' }}>
                   <div className="text-center mb-3">
                     <span className="text-xs font-semibold" style={{ color: '#6b7280' }}>PREMIUM FSI</span>
@@ -613,8 +303,6 @@ export default function SiteAnalyzerPage() {
                   </div>
                 </div>
               </div>
-
-              {/* Floor & Building Regulations */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div className="p-4 rounded-lg" style={{ backgroundColor: '#f9fafb', border: '1px solid #e5e7eb' }}>
                   <h4 className="text-sm font-bold mb-3" style={{ color: '#111827' }}>Floor Regulations</h4>
@@ -645,7 +333,6 @@ export default function SiteAnalyzerPage() {
                     </div>
                   </div>
                 </div>
-
                 <div className="p-4 rounded-lg" style={{ backgroundColor: '#f9fafb', border: '1px solid #e5e7eb' }}>
                   <h4 className="text-sm font-bold mb-3" style={{ color: '#111827' }}>Setback Requirements</h4>
                   <div className="space-y-2">
@@ -670,8 +357,6 @@ export default function SiteAnalyzerPage() {
                   </div>
                 </div>
               </div>
-
-              {/* Financial Recommendation */}
               <div className="p-4 rounded-lg" style={{ backgroundColor: '#ecfdf5', border: '2px solid #10b981' }}>
                 <div className="flex items-center gap-2 mb-2">
                   <span className="text-xl">💡</span>
@@ -694,9 +379,7 @@ export default function SiteAnalyzerPage() {
           {/* Recommendations */}
           {result.recommendations && result.recommendations.length > 0 && (
             <div className="card">
-              <h3 className="text-lg font-bold mb-4" style={{ color: '#111827' }}>
-                Recommendations
-              </h3>
+              <h3 className="text-lg font-bold mb-4" style={{ color: '#111827' }}>Recommendations</h3>
               <div className="space-y-3">
                 {result.recommendations.map((rec, idx) => (
                   <div
@@ -707,8 +390,7 @@ export default function SiteAnalyzerPage() {
                       borderLeft: `4px solid ${
                         rec.type === 'approval' ? '#10b981' :
                         rec.type === 'rejection' ? '#dc2626' :
-                        rec.type === 'mitigation' ? '#3b82f6' :
-                        '#f59e0b'
+                        rec.type === 'mitigation' ? '#3b82f6' : '#f59e0b'
                       }`
                     }}
                   >
@@ -724,11 +406,8 @@ export default function SiteAnalyzerPage() {
             <div className="card" style={{ borderLeft: '4px solid #3b82f6' }}>
               <div className="flex items-center gap-3 mb-4">
                 <span className="text-2xl">📍</span>
-                <h3 className="text-lg font-bold" style={{ color: '#111827' }}>
-                  Alternative Locations
-                </h3>
+                <h3 className="text-lg font-bold" style={{ color: '#111827' }}>Alternative Locations</h3>
               </div>
-              
               {result.alternative_locations && result.alternative_locations.length > 0 ? (
                 <>
                   <p className="text-sm mb-4" style={{ color: '#6b7280' }}>
@@ -739,27 +418,20 @@ export default function SiteAnalyzerPage() {
                       <div
                         key={idx}
                         className="p-4 rounded-lg transition-all hover:shadow-lg cursor-pointer"
-                        style={{
-                          backgroundColor: '#f0f9ff',
-                          border: '2px solid #3b82f6',
-                        }}
+                        style={{ backgroundColor: '#f0f9ff', border: '2px solid #3b82f6' }}
                       >
                         <div className="flex items-center justify-between mb-3">
-                          <span className="font-bold text-lg" style={{ color: '#111827' }}>
-                            {alt.location}
-                          </span>
-                          <span className="text-2xl font-bold" style={{ color: '#3b82f6' }}>
-                            {alt.suitability_score}
-                          </span>
+                          <span className="font-bold text-lg" style={{ color: '#111827' }}>{alt.location}</span>
+                          <span className="text-2xl font-bold" style={{ color: '#3b82f6' }}>{alt.suitability_score}</span>
                         </div>
                         <div className="mb-2">
                           <div className="w-full bg-gray-200 rounded-full h-2">
-                            <div 
-                              className="h-2 rounded-full" 
-                              style={{ 
+                            <div
+                              className="h-2 rounded-full"
+                              style={{
                                 width: `${alt.suitability_score}%`,
-                                backgroundColor: alt.suitability_score >= 80 ? '#10b981' : 
-                                               alt.suitability_score >= 70 ? '#3b82f6' : '#f59e0b'
+                                backgroundColor: alt.suitability_score >= 80 ? '#10b981' :
+                                                 alt.suitability_score >= 70 ? '#3b82f6' : '#f59e0b'
                               }}
                             ></div>
                           </div>
@@ -778,8 +450,8 @@ export default function SiteAnalyzerPage() {
                     No Suitable Alternatives Found in {city}
                   </p>
                   <p className="text-xs" style={{ color: '#78350f' }}>
-                    All locations in {city} have similar environmental challenges for {result.construction_type}. 
-                    Consider: (1) Implementing extensive mitigation measures, (2) Exploring locations in other cities, 
+                    All locations in {city} have similar environmental challenges for {result.construction_type}.
+                    Consider: (1) Implementing extensive mitigation measures, (2) Exploring locations in other cities,
                     or (3) Choosing a different construction type with less strict requirements.
                   </p>
                 </div>

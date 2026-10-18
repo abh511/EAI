@@ -62,19 +62,23 @@ async def test_forecast_48hr(client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_auth_register(client: AsyncClient):
-    """Test user registration endpoint"""
+    """Test user registration endpoint (demo path, so no real Supabase sign-up)"""
     payload = {
-        "email": "test@test.com",
+        "email": "tester@demo.com",
         "password": "test123",
         "full_name": "Test User"
     }
     response = await client.post("/api/auth/register", json=payload)
-    # Note: This may fail if Supabase is not configured or user already exists
-    # Accept both 201 (success) and 409 (already exists) or 400 (config issue)
-    assert response.status_code in [201, 400, 409]
-    if response.status_code == 201:
-        data = response.json()
-        assert "access_token" in data
+    assert response.status_code == 201
+    assert "access_token" in response.json()
+
+@pytest.mark.asyncio
+async def test_demo_bypass_requires_demo_domain(client: AsyncClient):
+    """Emails that merely start with "demo" must not skip authentication"""
+    from unittest.mock import patch
+    with patch("app.api.routes.auth.get_supabase_client", side_effect=Exception("offline")):
+        response = await client.post("/api/auth/login", json={"email": "demon@gmail.com", "password": "x"})
+    assert response.status_code == 401
 
 @pytest.mark.asyncio
 async def test_grievance_submit(client: AsyncClient):
@@ -89,3 +93,9 @@ async def test_grievance_submit(client: AsyncClient):
     assert response.status_code == 201
     data = response.json()
     assert "tracking_id" in data
+
+@pytest.mark.asyncio
+async def test_grievance_status_needs_database(client: AsyncClient):
+    """Without a database nothing is stored, so tracking must not invent a status"""
+    response = await client.get("/api/grievance/status/GRV-2026-ABC123")
+    assert response.status_code == 501

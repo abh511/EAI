@@ -6,13 +6,17 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from loguru import logger
 
+from fastapi.concurrency import run_in_threadpool
+
 from app.core.config import settings
-from app.api.routes import auth, dashboard, alerts, forecast, locations, grievance, simulation, site_analysis, ml_predictions, image_simulator
+from app.services import load_data
+from app.api.routes import auth, dashboard, alerts, forecast, locations, grievance, simulation, site_analysis, ml_predictions
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info(f"🚀 {settings.APP_NAME} v{settings.APP_VERSION} starting...")
-    # Boot ML models here (lazy-load on first request for speed)
+    logger.info(f"🚀 {settings.APP_NAME} v{settings.APP_VERSION} starting (data source: {settings.DATA_SOURCE})...")
+    # Load readings up front so the first request isn't slow (the database load takes ~10 s)
+    await run_in_threadpool(load_data)
     yield
     logger.info("🛑 Shutting down...")
 
@@ -44,7 +48,6 @@ app.include_router(grievance.router,     prefix="/api/grievance",     tags=["Gri
 app.include_router(simulation.router,    prefix="/api/simulation",    tags=["Simulation"])
 app.include_router(site_analysis.router, prefix="/api/site-analysis", tags=["Site Analysis"])
 app.include_router(ml_predictions.router, prefix="/api/ml",           tags=["Machine Learning"])
-app.include_router(image_simulator.router, prefix="/api/image-simulator", tags=["Image Simulator"])
 
 @app.get("/", tags=["Health"])
 async def root():

@@ -6,6 +6,7 @@ from fastapi import APIRouter, Query, HTTPException, status
 from typing import List, Dict
 from datetime import datetime
 import numpy as np
+import pandas as pd
 
 from app.services import get_location_data, load_data
 from loguru import logger
@@ -238,7 +239,7 @@ CONSTRUCTION_REQUIREMENTS = {
         "name": "Old Age Home / Senior Living",
         "aqi_max": 75, "noise_day_max": 55, "noise_night_max": 45,
         "water_quality_min": 80, "industrial_proximity_min": 5.0,
-        "traffic_density_max": 35, "green_cover_min": 35,
+        "traffic_density_max": 35, "green_cover_min": 35, "uhi_intensity_max": 3.0,
         "critical_factors": ["air", "noise", "water", "heat"],
         "icon": "🏡",
         "rationale": "Elderly have weakened immunity and pre-existing conditions. Extreme vulnerability to air pollution, heat stress, and noise-induced sleep disturbance."
@@ -293,7 +294,7 @@ CONSTRUCTION_REQUIREMENTS = {
 async def analyze_site(
     city: str = Query(...),
     location: str = Query(...),
-    construction_type: str = Query(..., regex="^(hospital|school|factory|hotel|residential|it_park|old_age_home|gym|street_food|market|sports_complex|parking)$"),
+    construction_type: str = Query(..., pattern="^(hospital|school|factory|hotel|residential|it_park|old_age_home|gym|street_food|market|sports_complex|parking)$"),
 ):
     """
     Analyze site suitability for construction
@@ -349,7 +350,7 @@ async def analyze_site(
             "suitability_score": round(score, 1),
             "risk_level": risk_level,
             "should_build": should_build,
-            "decision_summary": generate_decision_summary(should_build, score, construction_type, location, violations),
+            "decision_summary": generate_decision_summary(should_build, round(score, 1), construction_type, location, violations),
             "environmental_checks": checks,
             "violations": violations,
             "recommendations": recommendations,
@@ -365,6 +366,45 @@ async def analyze_site(
         logger.error(f"Site analysis error: {str(e)}")
         raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, "Analysis failed")
 
+# One row per check:
+# (requirement key, check id, reading column, default, weight, direction, tolerance, tolerance type, factor, unit, impact)
+# Inside the limit a check earns its full weight. Past it, credit falls linearly to
+# zero at `tolerance` beyond the limit (a fraction of the limit, or absolute units),
+# so AQI 105 against a limit of 100 scores far better than AQI 300.
+SUITABILITY_CHECKS = [
+    ("aqi_max", "air_quality", "aqi_us", 150, 20, "max", 0.5, "rel", "Air Quality", "AQI",
+     "Respiratory health risk for occupants"),
+    ("noise_day_max", "noise_level", "noise_day_dba", 65, 15, "max", 10, "abs", "Noise Pollution", "dB(A)",
+     "Stress, reduced concentration, communication difficulty"),
+    ("noise_night_max", "night_noise", "noise_night_dba", 50, 10, "max", 10, "abs", "Night-time Noise", "dB(A)",
+     "Sleep disturbance, raised blood pressure"),
+    ("water_quality_min", "water_quality", "water_quality_index", 50, 15, "min", 0.3, "rel", "Water Quality", "WQI",
+     "Contaminated water causes waterborne diseases, unsafe for consumption"),
+    ("industrial_proximity_min", "industrial_distance", "industrial_proximity_km", 10, 15, "min", 0.5, "rel",
+     "Industrial Proximity", "km", "Constant exposure to industrial emissions (NOx, SOx, particulates)"),
+    ("traffic_density_max", "traffic", "traffic_density", 50, 10, "max", 0.5, "rel", "Traffic Congestion", "/100",
+     "Vehicle emissions increase air pollution, noise, and access difficulty"),
+    ("green_cover_min", "green_cover", "green_cover_pct", 10, 10, "min", 0.5, "rel", "Insufficient Green Space", "%",
+     "Lack of trees increases heat, reduces air purification"),
+    ("uhi_intensity_max", "heat_island", "uhi_intensity", 2, 10, "max", 0.5, "rel", "Urban Heat Island", "°C",
+     "Extreme heat causes discomfort, health risks for elderly, higher cooling costs"),
+    ("waste_gen_max", "waste_management", "waste_gen_kg_sqkm_day", 3000, 10, "max", 0.5, "rel",
+     "High Waste Generation", "kg/km²/day", "Waste accumulation attracts pests, causes odor and sanitation issues"),
+]
+
+# The dataset has no distance-to-homes column, so a location's zone type stands in for it
+RESIDENTIAL_ZONE_KEYWORDS = ("Residential", "Slum", "High-Density", "Township")
+RESIDENTIAL_BLOCK_CAP = 40  # below the pass mark of 60
+
+
+def _check_credit(value: float, limit: float, direction: str, tolerance: float, tol_type: str) -> float:
+    gap = value - limit if direction == "max" else limit - value
+    if gap <= 0:
+        return 1.0
+    span = tolerance if tol_type == "abs" else limit * tolerance
+    return max(0.0, 1 - gap / span)
+
+
 def calculate_suitability(reading: dict, requirements: dict) -> tuple:
     """
     Calculate suitability score (0-100) based on requirements
@@ -372,167 +412,75 @@ def calculate_suitability(reading: dict, requirements: dict) -> tuple:
     """
     checks = {}
     violations = []
-    total_score = 0
+    total_score = 0.0
     max_possible = 0
-    
-    # Air Quality Check
-    if "aqi_max" in requirements:
-        aqi = reading.get("aqi_us", 150)
-        req = requirements["aqi_max"]
-        if aqi <= req:
-            checks["air_quality"] = {"status": "pass", "value": aqi, "limit": req, "message": f"AQI {aqi} ✓"}
-            total_score += 20
+
+    for key, check_id, col, default, weight, direction, tol, tol_type, factor, unit, impact in SUITABILITY_CHECKS:
+        if key not in requirements:
+            continue
+        value = reading.get(col, default)
+        value = default if value is None or pd.isna(value) else float(value)
+        limit = requirements[key]
+        credit = _check_credit(value, limit, direction, tol, tol_type)
+        total_score += weight * credit
+        max_possible += weight
+
+        shown = int(value) if unit == "kg/km²/day" else round(value, 2 if unit == "km" else 1)
+        if credit == 1.0:
+            checks[check_id] = {"status": "pass", "value": shown, "limit": limit, "credit": 1.0,
+                                "message": f"{factor.replace('Insufficient ', '').replace('High ', '')}: {shown} {unit} ✓"}
+            continue
+
+        word = "above the maximum" if direction == "max" else "below the minimum"
+        checks[check_id] = {"status": "fail", "value": shown, "limit": limit, "credit": round(credit, 2),
+                            "message": f"{shown} {unit} ({word} of {limit} {unit}; {round(credit * 100)}% credit)"}
+        if credit > 0:
+            severity = "medium"
         else:
-            excess = round((aqi - req) / req * 100)
-            checks["air_quality"] = {"status": "fail", "value": aqi, "limit": req, "message": f"AQI {aqi} (EXCEEDS by {excess}%)"}
-            violations.append({
-                "factor": "Air Quality",
-                "severity": "high" if aqi > req * 1.5 else "medium",
-                "message": f"AQI is {aqi}, {excess}% above acceptable limit of {req}",
-                "impact": "Respiratory health risk for occupants"
-            })
-        max_possible += 20
-    
-    # Noise Check
-    if "noise_day_max" in requirements:
-        noise = reading.get("noise_day_dba", 65)
-        req = requirements["noise_day_max"]
-        if noise <= req:
-            checks["noise_level"] = {"status": "pass", "value": noise, "limit": req, "message": f"Noise {noise} dB(A) ✓"}
-            total_score += 15
-        else:
-            excess = round(noise - req, 1)
-            checks["noise_level"] = {"status": "fail", "value": noise, "limit": req, "message": f"Noise {noise} dB(A) (EXCEEDS by {excess} dB)"}
-            violations.append({
-                "factor": "Noise Pollution",
-                "severity": "high" if noise > req + 10 else "medium",
-                "message": f"Noise level is {noise} dB(A), {excess} dB above limit of {req} dB(A)",
-                "impact": "Sleep disturbance, stress, reduced concentration"
-            })
+            severity = "critical" if check_id == "water_quality" else "high"
+        violations.append({
+            "factor": factor,
+            "severity": severity,
+            "message": f"{factor}: {shown} {unit}, {word} of {limit} {unit}",
+            "impact": impact,
+        })
+
+    residential = False
+    if "residential_proximity_min" in requirements:
+        zone = str(reading.get("zone_type", ""))
+        residential = any(k in zone for k in RESIDENTIAL_ZONE_KEYWORDS)
         max_possible += 15
-    
-    # Water Quality Check
-    if "water_quality_min" in requirements:
-        wqi = reading.get("water_quality_index", 50)
-        req = requirements["water_quality_min"]
-        if wqi >= req:
-            checks["water_quality"] = {"status": "pass", "value": wqi, "limit": req, "message": f"WQI {wqi} ✓"}
+        if not residential:
             total_score += 15
+            checks["residential_zone"] = {"status": "pass", "value": zone, "limit": "non-residential zone",
+                                          "credit": 1.0, "message": f"{zone} zone ✓"}
         else:
-            deficit = round((req - wqi) / req * 100)
-            checks["water_quality"] = {"status": "fail", "value": wqi, "limit": req, "message": f"WQI {wqi} (BELOW required {req})"}
+            checks["residential_zone"] = {"status": "fail", "value": zone, "limit": "non-residential zone",
+                                          "credit": 0.0, "message": f"{zone} zone (residents nearby)"}
             violations.append({
-                "factor": "Water Quality",
-                "severity": "critical" if wqi < req * 0.7 else "high",
-                "message": f"Water quality index is {wqi}, {deficit}% below required standard of {req}",
-                "impact": "Contaminated water causes waterborne diseases, unsafe for consumption"
-            })
-        max_possible += 15
-    
-    # Industrial Proximity Check
-    if "industrial_proximity_min" in requirements:
-        dist = reading.get("industrial_proximity_km", 10)
-        req = requirements["industrial_proximity_min"]
-        if dist >= req:
-            checks["industrial_distance"] = {"status": "pass", "value": dist, "limit": req, "message": f"{dist}km from industry ✓"}
-            total_score += 15
-        else:
-            checks["industrial_distance"] = {"status": "fail", "value": dist, "limit": req, "message": f"{dist}km (TOO CLOSE - need {req}km)"}
-            violations.append({
-                "factor": "Industrial Proximity",
+                "factor": "Residential Proximity",
                 "severity": "high",
-                "message": f"Only {dist}km from industrial zone. Required minimum: {req}km",
-                "impact": "Constant exposure to industrial emissions (NOx, SOx, particulates)"
+                "message": f"Location is a {zone} zone; required at least "
+                           f"{requirements['residential_proximity_min']} km from homes",
+                "impact": "Emissions and noise directly affect nearby residents",
             })
-        max_possible += 15
-    
-    # Traffic Density Check
-    if "traffic_density_max" in requirements:
-        traffic = reading.get("traffic_density", 50)
-        req = requirements["traffic_density_max"]
-        if traffic <= req:
-            checks["traffic"] = {"status": "pass", "value": traffic, "limit": req, "message": f"Traffic {traffic}/100 ✓"}
-            total_score += 10
-        else:
-            excess = round((traffic - req) / req * 100)
-            checks["traffic"] = {"status": "fail", "value": traffic, "limit": req, "message": f"Traffic {traffic}/100 (EXCEEDS by {excess}%)"}
-            violations.append({
-                "factor": "Traffic Congestion",
-                "severity": "medium",
-                "message": f"Traffic density {traffic}/100, {excess}% above acceptable {req}/100",
-                "impact": "Vehicle emissions increase air pollution, noise, and access difficulty"
-            })
-        max_possible += 10
-    
-    # Green Cover Check
-    if "green_cover_min" in requirements:
-        green = reading.get("green_cover_pct", 10)
-        req = requirements["green_cover_min"]
-        if green >= req:
-            checks["green_cover"] = {"status": "pass", "value": green, "limit": req, "message": f"Green cover {green}% ✓"}
-            total_score += 10
-        else:
-            deficit = round((req - green) / req * 100)
-            checks["green_cover"] = {"status": "fail", "value": green, "limit": req, "message": f"Green cover {green}% (BELOW {req}%)"}
-            violations.append({
-                "factor": "Insufficient Green Space",
-                "severity": "medium",
-                "message": f"Only {green}% green cover, {deficit}% below required {req}%",
-                "impact": "Lack of trees increases heat, reduces air purification, poor aesthetics"
-            })
-        max_possible += 10
-    
-    # UHI Check
-    if "uhi_intensity_max" in requirements:
-        uhi = reading.get("uhi_intensity", 2)
-        req = requirements["uhi_intensity_max"]
-        if uhi <= req:
-            checks["heat_island"] = {"status": "pass", "value": uhi, "limit": req, "message": f"UHI {uhi}°C ✓"}
-            total_score += 10
-        else:
-            excess = round(uhi - req, 1)
-            checks["heat_island"] = {"status": "fail", "value": uhi, "limit": req, "message": f"UHI {uhi}°C (EXCEEDS by {excess}°C)"}
-            violations.append({
-                "factor": "Urban Heat Island",
-                "severity": "medium",
-                "message": f"UHI intensity is {uhi}°C, {excess}°C above comfortable limit of {req}°C",
-                "impact": "Extreme heat causes discomfort, health risks for elderly, higher cooling costs"
-            })
-        max_possible += 10
-    
-    # Waste Generation Check (for food/market areas)
-    if "waste_gen_max" in requirements:
-        waste = reading.get("waste_gen_kg_sqkm_day", 3000)
-        req = requirements["waste_gen_max"]
-        if waste <= req:
-            checks["waste_management"] = {"status": "pass", "value": waste, "limit": req, "message": f"Waste {int(waste)} kg/km²/day ✓"}
-            total_score += 10
-        else:
-            excess = round((waste - req) / req * 100)
-            checks["waste_management"] = {"status": "fail", "value": waste, "limit": req, "message": f"Waste {int(waste)} kg/km²/day (EXCEEDS by {excess}%)"}
-            violations.append({
-                "factor": "High Waste Generation",
-                "severity": "medium",
-                "message": f"Area generates {int(waste)} kg/km²/day waste, {excess}% above manageable limit of {int(req)} kg/km²/day",
-                "impact": "Waste accumulation attracts pests, causes odor, sanitation issues, and health hazards"
-            })
-        max_possible += 10
-    
-    # Calculate percentage score
+
     final_score = (total_score / max_possible * 100) if max_possible > 0 else 0
-    
+    if residential:
+        # Next to homes is a blocker for polluting builds, whatever the other scores
+        final_score = min(final_score, RESIDENTIAL_BLOCK_CAP)
     return final_score, violations, checks
 
 def find_better_locations(city: str, construction_type: str, exclude: str) -> list:
     """Find alternative locations with better suitability scores"""
     df = load_data()
-    df_city = df[df["city"] == city]
+    df_city = df[df["city"].str.lower() == city.lower()]
     
     alternatives = []
     requirements = CONSTRUCTION_REQUIREMENTS[construction_type]
     
     for location in df_city["location"].unique():
-        if location == exclude:
+        if location.lower() == exclude.lower():
             continue
         loc_data = df_city[df_city["location"] == location].sample(1).iloc[0].to_dict()
         score, _, _ = calculate_suitability(loc_data, requirements)

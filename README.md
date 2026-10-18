@@ -15,8 +15,17 @@ cd backend
 python3 -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
+python scripts/train_all_models.py   # once: trains the ML models (~1 min)
 uvicorn app.main:app --reload
 ```
+
+### Database (optional)
+The backend reads the bundled CSV by default. To serve data from Supabase instead:
+1. Run `scripts/supabase_schema.sql` in the Supabase SQL Editor (new projects only).
+2. `cd backend && python scripts/migrate_and_seed.py` adds the remaining columns and uploads the 10,000 readings.
+3. Set `DATA_SOURCE=supabase` in `backend/.env`. Grievances are then stored in the database too.
+
+If the database can't be reached, the backend falls back to the CSV.
 
 ### Frontend Setup
 ```bash
@@ -26,7 +35,7 @@ npm run dev
 ```
 
 ### Access
-- Frontend: http://localhost:5173
+- Frontend: http://localhost:3000
 - Backend API: http://localhost:8000
 - API Docs: http://localhost:8000/docs
 
@@ -255,9 +264,9 @@ npm run dev
 ## 📚 Documentation
 
 - `README.md` - This file
-- `HACKATHON_QUICK_START.md` - Quick start guide
-- `HACKATHON_UPGRADES_STATUS.md` - Feature completion status
-- `INTEGRATION_GUIDE.md` - THAC integration analysis
+- `PROJECT_SUMMARY.md` - Architecture overview
+- `EXPLANATION.md` - Request flow walkthrough
+- `docs/API.md` - API reference
 
 ## 🤝 Contributing
 

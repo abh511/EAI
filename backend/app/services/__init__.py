@@ -10,6 +10,10 @@ from datetime import datetime, timedelta
 from functools import lru_cache
 from loguru import logger
 
+from app.core.config import settings
+from app.db import get_supabase_client
+from app.db.readings import fetch_readings_df
+
 DATA_PATH = Path(__file__).parent.parent.parent / "data" / "pune_mumbai_environmental_data_17022026.csv"
 
 THRESHOLDS = {
@@ -41,6 +45,17 @@ AUTHORITY_MAP = {
 
 @lru_cache(maxsize=1)
 def load_data() -> pd.DataFrame:
+    if settings.DATA_SOURCE.lower() == "supabase":
+        try:
+            df = fetch_readings_df(get_supabase_client())
+            if not df.empty:
+                return df
+            logger.warning("env_readings is empty. Run scripts/migrate_and_seed.py. Using the CSV instead.")
+        except Exception as e:
+            logger.error(f"Could not load readings from Supabase ({e}). Using the CSV instead.")
+    return _load_csv()
+
+def _load_csv() -> pd.DataFrame:
     if not DATA_PATH.exists():
         logger.warning(f"Dataset not found at {DATA_PATH}. Using generated mock.")
         return _generate_mock()
@@ -60,6 +75,18 @@ def get_latest_reading(city: str, location: str) -> dict:
         return {}
     return df.sample(1).iloc[0].to_dict()
 
+def get_reading_with_history(city: str, location: str) -> tuple:
+    """
+    Pick a "live" reading (random, like get_latest_reading) and return it with
+    every earlier reading from the same location, for time-based ML features.
+    """
+    df = get_location_data(city, location)
+    if df.empty:
+        return {}, df
+    df = df.assign(timestamp=pd.to_datetime(df["timestamp"])).sort_values("timestamp")
+    pos = np.random.randint(len(df))
+    return df.iloc[pos].to_dict(), df.iloc[:pos + 1]
+
 def get_all_cities() -> dict:
     df = load_data()
     result = {}
@@ -70,15 +97,16 @@ def get_all_cities() -> dict:
         result[city] = locations
     return result
 
-def generate_alerts(city: str, location: str) -> list:
-    reading = get_latest_reading(city, location)
+def generate_alerts(city: str, location: str, reading: dict = None) -> list:
+    if reading is None:
+        reading = get_latest_reading(city, location)
     if not reading:
         return []
     alerts = []
     sev_map = {0.5: "low", 1.0: "medium", 1.5: "high", 2.0: "critical"}
     for param, meta in THRESHOLDS.items():
         val = reading.get(param)
-        if val is None:
+        if val is None or pd.isna(val):
             continue
         ratio = float(val) / meta["limit"]
         if ratio < 1.0:
@@ -145,8 +173,9 @@ def build_pillar_cards(reading: dict) -> list:
          "description": f"SOx: {reading.get('sox_ug_m3',0):.1f} µg/m³"},
 
         {"pillar": "waste",       "label": "Solid Waste",   "icon": "Trash2",
-         "value": max(reading.get("waste_gen_kg_sqkm_day", 250), 150),   "unit": "kg/km²/day",
-         "status": "good" if reading.get("waste_gen_kg_sqkm_day", 250) < 300 else "moderate" if reading.get("waste_gen_kg_sqkm_day", 250) < 500 else "unhealthy",
+         "value": reading.get("waste_gen_kg_sqkm_day", 0),   "unit": "kg/km²/day",
+         # 5000 matches the manageable limit used by the Site Analyzer
+         "status": status(reading.get("waste_gen_kg_sqkm_day", 0), 5000),
          "trend": trend(),
          "description": f"Recycling: {reading.get('waste_recycling_pct',0):.1f}%"},
 
@@ -179,6 +208,7 @@ def generate_forecast(city: str, location: str, pillar: str = "air") -> dict:
         "waste":       ("waste_landfill_pct", "Landfill", 70,  "%"),
     }
     col, label, threshold, unit = param_map.get(pillar, param_map["air"])
+    historical_values = np.array([])
     
     # Get historical data for this location and parameter
     if not location_data.empty and col in location_data.columns:
@@ -211,7 +241,7 @@ def generate_forecast(city: str, location: str, pillar: str = "air") -> dict:
     now = datetime.now()
     current_val = mean_val
     peak_time = None
-    peak_val = current_val
+    peak_val = float("-inf")
     
     # Generate 48-hour forecast with realistic patterns
     for h in range(49):
@@ -255,10 +285,10 @@ def generate_forecast(city: str, location: str, pillar: str = "air") -> dict:
         
         if current_val > peak_val:
             peak_val = current_val
-            peak_time = t.strftime("%Y-%m-%d %H:%M")
+            peak_time = t.strftime("%Y-%m-%dT%H:%M")
         
         points.append({
-            "time": t.strftime("%Y-%m-%d %H:%M"),
+            "time": t.strftime("%Y-%m-%dT%H:%M"),
             "value": round(float(current_val), 2),
             "will_breach": bool(breach),
             "confidence": float(conf),
@@ -279,7 +309,7 @@ def generate_forecast(city: str, location: str, pillar: str = "air") -> dict:
         "peak_risk_time": peak_time if breach_hours > 0 else None,
         "summary": summary,
         "forecast_model": "ARIMA-based with historical patterns",
-        "data_points_used": len(historical_values) if not location_data.empty else 0,
+        "data_points_used": len(historical_values),
     }
 
 def _generate_mock() -> pd.DataFrame:

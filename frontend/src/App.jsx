@@ -4,6 +4,7 @@ import { Toaster } from 'react-hot-toast'
 
 // Lazy load pages for better performance
 const LoginPage = lazy(() => import('./pages/LoginPage.jsx'))
+const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage.jsx'))
 const HomePage = lazy(() => import('./pages/HomePage.jsx'))
 const CitySelectPage = lazy(() => import('./pages/CitySelectPage.jsx'))
 const DashboardPage = lazy(() => import('./pages/DashboardPage.jsx'))
@@ -51,6 +52,7 @@ export default function App() {
           <Routes>
             {/* Public */}
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
 
             {/* Protected */}
             <Route path="/home" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />

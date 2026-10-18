@@ -36,7 +36,8 @@ export default function AlertsPage() {
     try {
       await alertsAPI.acknowledge(alertId);
       toast.success('Alert acknowledged');
-      fetchAlerts();
+      // Update in place: refetching samples a new reading and would bring the alert back
+      setAlerts((prev) => prev.map((a) => (a.id === alertId ? { ...a, status: 'acknowledged' } : a)));
     } catch (error) {
       toast.error('Failed to acknowledge alert');
     }

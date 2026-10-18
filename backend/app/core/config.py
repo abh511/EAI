@@ -17,6 +17,8 @@ class Settings(BaseSettings):
     ALLOWED_ORIGINS: str = "http://localhost:3000"
     MODEL_DIR: str = "./app/ml/saved_models"
     DATASET_PATH: str = "./data/pune_mumbai_environmental_data_17022026.csv"
+    # "supabase" reads env_readings from the database (falls back to the CSV if unreachable)
+    DATA_SOURCE: str = "csv"
 
     class Config:
         env_file = ".env"

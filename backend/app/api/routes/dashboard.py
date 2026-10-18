@@ -19,7 +19,7 @@ async def get_summary(city: str = Query(...), location: str = Query(...)):
             raise HTTPException(status.HTTP_404_NOT_FOUND, f"No data found for {location}, {city}")
         
         pillars = build_pillar_cards(reading)
-        alerts = generate_alerts(city, location)
+        alerts = generate_alerts(city, location, reading)
         
         aqi = int(reading.get("aqi_us", 0))
         

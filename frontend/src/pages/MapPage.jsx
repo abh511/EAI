@@ -1,76 +1,55 @@
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+import { dashboardAPI } from '../services/api';
 import useAppStore from '../store/useAppStore';
 import Layout from '../components/Layout';
+import toast from 'react-hot-toast';
+
+const RISK_COLORS = { low: '#10b981', medium: '#f59e0b', high: '#ef4444', critical: '#991b1b' };
 
 export default function MapPage() {
   const navigate = useNavigate();
   const { city, location } = useAppStore();
+  const mapRef = useRef(null);
+  const [overview, setOverview] = useState(null);
 
   useEffect(() => {
     if (!city || !location) {
       navigate('/select-city');
       return;
     }
-
-    // Load Leaflet CSS
-    const link = document.createElement('link');
-    link.rel = 'stylesheet';
-    link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-    document.head.appendChild(link);
-
-    // Load Leaflet JS
-    const script = document.createElement('script');
-    script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
-    script.onload = initMap;
-    document.head.appendChild(script);
-
-    function initMap() {
-      if (!window.L) return;
-
-      // Initialize map (centered on India - Pune/Mumbai area)
-      const map = window.L.map('map', { attributionControl: false }).setView([18.5204, 73.8567], 12);
-
-      // OpenStreetMap tiles
-      window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19
-      }).addTo(map);
-
-      // Sample risk markers for Indian cities
-      const markers = [
-        { lat: 18.5204, lng: 73.8567, area: 'Pune Downtown', risk: 'High', count: 24 },
-        { lat: 18.5314, lng: 73.8446, area: 'Koregaon Park', risk: 'Low', count: 3 },
-        { lat: 18.5642, lng: 73.7769, area: 'Hinjewadi', risk: 'Medium', count: 7 },
-        { lat: 18.4632, lng: 73.8671, area: 'Hadapsar', risk: 'High', count: 13 }
-      ];
-
-      function colorForRisk(risk) {
-        if (risk === 'High') return '#ef4444';
-        if (risk === 'Medium') return '#f59e0b';
-        return '#10b981';
-      }
-
-      markers.forEach(m => {
-        const marker = window.L.circleMarker([m.lat, m.lng], {
-          radius: 10,
-          fillColor: colorForRisk(m.risk),
-          color: '#fff',
-          weight: 2,
-          fillOpacity: 0.9
-        }).addTo(map);
-
-        marker.bindPopup(`<strong>${m.area}</strong><br>Risk: <strong>${m.risk}</strong><br>Violations: <strong>${m.count}</strong>`);
-      });
-    }
-
-    return () => {
-      // Cleanup
-      const mapElement = document.getElementById('map');
-      if (mapElement) {
-        mapElement.innerHTML = '';
-      }
-    };
+    dashboardAPI.getCityOverview(city)
+      .then((res) => setOverview(res.data))
+      .catch((err) => toast.error(err.message || 'Failed to load map data'));
   }, [city, location, navigate]);
+
+  useEffect(() => {
+    if (!overview?.locations?.length) return;
+
+    const map = L.map(mapRef.current, { attributionControl: false });
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+
+    const bounds = [];
+    overview.locations.forEach((loc) => {
+      const selected = loc.name === location;
+      L.circleMarker([loc.latitude, loc.longitude], {
+        radius: selected ? 14 : 10,
+        fillColor: RISK_COLORS[loc.risk] || '#6b7280',
+        color: selected ? '#111827' : '#fff',
+        weight: selected ? 3 : 2,
+        fillOpacity: 0.9,
+      })
+        .addTo(map)
+        .bindPopup(`<strong>${loc.name}</strong><br>AQI: <strong>${loc.aqi}</strong><br>Risk: <strong>${loc.risk}</strong>`);
+      bounds.push([loc.latitude, loc.longitude]);
+    });
+    map.fitBounds(bounds, { padding: [30, 30] });
+
+    // Leaflet keeps state on the container; remove it so revisiting the page works
+    return () => map.remove();
+  }, [overview, location]);
 
   return (
     <Layout title="Environmental Risk Map" subtitle={`${location}, ${city}`}>
@@ -78,13 +57,14 @@ export default function MapPage() {
         <div className="mb-4">
           <h3 className="text-lg font-bold mb-2" style={{ color: '#111827' }}>Risk Distribution Map</h3>
           <p style={{ color: '#6b7280', fontSize: '14px' }}>
-            Interactive map showing environmental risk levels across different areas
+            Current AQI risk for every monitored location in {city}
+            {overview && ` (city average AQI ${overview.avg_aqi})`}. Your selected location is outlined.
           </p>
         </div>
         
         {/* Map Container */}
         <div 
-          id="map" 
+          ref={mapRef}
           style={{ 
             height: '420px', 
             borderRadius: '12px',
@@ -120,6 +100,15 @@ export default function MapPage() {
               backgroundColor: '#ef4444' 
             }}></div>
             <span style={{ color: '#6b7280', fontSize: '14px' }}>High Risk</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div style={{ 
+              width: '16px', 
+              height: '16px', 
+              borderRadius: '50%', 
+              backgroundColor: '#991b1b' 
+            }}></div>
+            <span style={{ color: '#6b7280', fontSize: '14px' }}>Critical Risk</span>
           </div>
         </div>
       </div>

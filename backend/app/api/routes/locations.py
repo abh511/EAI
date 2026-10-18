@@ -18,6 +18,11 @@ async def list_cities():
         logger.error(f"Error fetching cities: {str(e)}")
         raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, "Failed to fetch cities")
 
+# Must be registered before "/{city}", otherwise "/ping" is captured as a city name
+@router.get("/ping")
+async def ping():
+    return {"router": "locations", "status": "online"}
+
 @router.get("/{city}")
 async def get_city_locations(city: str):
     """Get all locations for a specific city"""
@@ -56,7 +61,3 @@ async def get_city_locations(city: str):
     except Exception as e:
         logger.error(f"Error fetching locations for {city}: {str(e)}")
         raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, f"Failed to fetch locations for {city}")
-
-@router.get("/ping")
-async def ping():
-    return {"router": "locations", "status": "online"}

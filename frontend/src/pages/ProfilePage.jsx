@@ -1,13 +1,15 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import useAppStore from '../store/useAppStore';
+import useAppStore, { isDemoUser } from '../store/useAppStore';
 import { supabase } from '../services/supabase';
 import toast from 'react-hot-toast';
 import Layout from '../components/Layout';
 
 export default function ProfilePage() {
   const navigate = useNavigate();
-  const { city, location } = useAppStore();
+  const { city, location, user: sessionUser } = useAppStore();
+  const isDemo = isDemoUser(sessionUser);
+  const demoKey = `ew_demo_profile:${sessionUser?.email}`;
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState(null);
   
@@ -23,7 +25,35 @@ export default function ProfilePage() {
     loadUserProfile();
   }, []);
 
+  // Demo accounts have no Supabase user, so their profile lives in this browser
+  const readDemoProfile = () => {
+    try {
+      return JSON.parse(localStorage.getItem(demoKey)) || {};
+    } catch {
+      return {};
+    }
+  };
+
+  const saveProfile = async (fields) => {
+    if (isDemo) {
+      localStorage.setItem(demoKey, JSON.stringify({ ...readDemoProfile(), ...fields }));
+      return;
+    }
+    const { error } = await supabase.auth.updateUser({ data: fields });
+    if (error) throw error;
+  };
+
   const loadUserProfile = async () => {
+    if (isDemo) {
+      const saved = readDemoProfile();
+      setEmail(sessionUser.email);
+      setFullName(saved.full_name ?? sessionUser.name ?? '');
+      setUsername(saved.username || '');
+      setMobileNumber(saved.mobile || '');
+      setAddress(saved.address || '');
+      setPhotoURL(saved.photo_url || null);
+      return;
+    }
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
@@ -65,15 +95,12 @@ export default function ProfilePage() {
       setPhotoURL(photoDataURL);
 
       try {
-        const { error } = await supabase.auth.updateUser({
-          data: { photo_url: photoDataURL }
-        });
-
-        if (error) throw error;
+        await saveProfile({ photo_url: photoDataURL });
         toast.success('Profile photo updated!');
       } catch (error) {
         console.error('Error saving photo:', error);
-        toast.error('Error saving photo');
+        // A large photo can exceed the browser's storage quota for demo accounts
+        toast.error(isDemo ? 'Photo is too large to save in the browser. Try a smaller image.' : 'Error saving photo');
       }
     };
     reader.readAsDataURL(file);
@@ -87,11 +114,7 @@ export default function ProfilePage() {
     setPhotoURL(null);
 
     try {
-      const { error } = await supabase.auth.updateUser({
-        data: { photo_url: null }
-      });
-
-      if (error) throw error;
+      await saveProfile({ photo_url: null });
       toast.success('Profile photo removed!');
     } catch (error) {
       console.error('Error removing photo:', error);
@@ -104,17 +127,13 @@ export default function ProfilePage() {
     setLoading(true);
 
     try {
-      const { error } = await supabase.auth.updateUser({
-        data: {
-          full_name: fullName,
-          username: username,
-          mobile: mobileNumber,
-          address: address
-        }
+      await saveProfile({
+        full_name: fullName,
+        username: username,
+        mobile: mobileNumber,
+        address: address
       });
-
-      if (error) throw error;
-      toast.success('Profile updated successfully!');
+      toast.success(isDemo ? 'Profile saved in this browser (demo account)' : 'Profile updated successfully!');
     } catch (error) {
       console.error('Error updating profile:', error);
       toast.error('Error updating profile');

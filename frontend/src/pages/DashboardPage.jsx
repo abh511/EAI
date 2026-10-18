@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { dashboardAPI } from '../services/api';
+import { dashboardAPI, mlAPI } from '../services/api';
 import useAppStore from '../store/useAppStore';
 import toast from 'react-hot-toast';
 import Layout from '../components/Layout';
@@ -62,13 +62,8 @@ export default function DashboardPage() {
   const fetchMLPrediction = useCallback(async () => {
     setMlLoading(true);
     try {
-      const response = await fetch(
-        `http://localhost:8000/api/ml/predict-risk?city=${encodeURIComponent(city)}&location=${encodeURIComponent(location)}`
-      );
-      if (response.ok) {
-        const data = await response.json();
-        setMlPrediction(data);
-      }
+      const response = await mlAPI.predictRisk(city, location);
+      setMlPrediction(response.data);
     } catch (error) {
       console.error('Failed to load ML prediction:', error);
     } finally {
@@ -167,7 +162,11 @@ export default function DashboardPage() {
               <i className="fas fa-brain text-2xl" style={{ color: '#10b981' }}></i>
             </div>
             <div>
-              <h3 className="text-lg font-bold" style={{ color: '#333' }}>AI Risk Assessment</h3>
+              <h3 className="text-lg font-bold" style={{ color: '#333' }}>AI Risk Forecast</h3>
+              <p className="text-xs" style={{ color: '#8390A2' }}>
+                Average risk over the next {mlPrediction.horizon_hours || 3} hours
+                {mlPrediction.current_risk_level && ` · Current: ${mlPrediction.current_risk_level} (AQI ${mlPrediction.current_aqi})`}
+              </p>
             </div>
           </div>
           
@@ -185,7 +184,7 @@ export default function DashboardPage() {
                 '#10b981'
               }`
             }}>
-              <p className="text-xs font-semibold uppercase mb-2" style={{ color: '#8390A2' }}>Predicted Risk Level</p>
+              <p className="text-xs font-semibold uppercase mb-2" style={{ color: '#8390A2' }}>Forecast Risk Level</p>
               <p className="text-3xl font-bold" style={{ 
                 color: mlPrediction.risk_level === 'Critical' ? '#dc2626' :
                        mlPrediction.risk_level === 'High' ? '#f97316' :
@@ -194,6 +193,11 @@ export default function DashboardPage() {
               }}>
                 {mlPrediction.risk_level}
               </p>
+              {mlPrediction.safety_override && (
+                <p className="text-xs mt-1" style={{ color: '#dc2626' }}>
+                  Air is hazardous right now, so the forecast is set to Critical.
+                </p>
+              )}
             </div>
 
             {/* Confidence */}

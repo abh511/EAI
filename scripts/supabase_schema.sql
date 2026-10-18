@@ -1,6 +1,8 @@
 -- ╔══════════════════════════════════════════════════════════════════╗
 -- ║   EnviroWatch AI  —  Supabase Database Schema                   ║
 -- ║   Run this in: Supabase Dashboard → SQL Editor → Run            ║
+-- ║   Then: cd backend && python scripts/migrate_and_seed.py        ║
+-- ║   (applies migrations/001_full_readings.sql + uploads the data) ║
 -- ╚══════════════════════════════════════════════════════════════════╝
 
 -- ── Extensions ──────────────────────────────────────────────────────────────
@@ -142,13 +144,13 @@ INSERT INTO locations (city_id, name, zone_type, latitude, longitude)
 SELECT pune.id, loc.name, loc.zone, loc.lat, loc.lon FROM pune,
 (VALUES
   ('Viman Nagar',     'Residential-IT',       18.5679, 73.9143),
-  ('Koregaon Park',   'Upscale Residential',  18.5362, 73.8942),
+  ('Koregaon Park',   'Upscale Residential-Commercial',  18.5362, 73.8942),
   ('Hadapsar',        'Industrial-Residential',18.5018,73.9260),
   ('Kothrud',         'Dense Residential',    18.5074, 73.8077),
   ('Pimpri-Chinchwad','Heavy Industrial',     18.6279, 73.7997),
   ('Hinjewadi',       'IT Park',              18.5904, 73.7285),
   ('Shivaji Nagar',   'Central Commercial',   18.5308, 73.8475),
-  ('Baner',           'Residential Suburb',   18.5590, 73.7868),
+  ('Baner',           'Residential-IT Suburb',   18.5590, 73.7868),
   ('Yerawada',        'Mixed Urban',          18.5504, 73.8938),
   ('Magarpatta City', 'Gated IT Township',    18.5148, 73.9310)
 ) AS loc(name, zone, lat, lon)
@@ -167,7 +169,7 @@ SELECT mumbai.id, loc.name, loc.zone, loc.lat, loc.lon, loc.coastal FROM mumbai,
   ('Powai',        'IT-Residential (Lakeside)',     19.1197, 72.9053, FALSE),
   ('Colaba',       'Historic Coastal Commercial',  18.9067, 72.8147, TRUE),
   ('Kurla',        'High-Density Mixed',           19.0726, 72.8794, FALSE),
-  ('Malad West',   'Suburban Residential',         19.1863, 72.8481, TRUE),
+  ('Malad West',   'Suburban Residential-Commercial',         19.1863, 72.8481, TRUE),
   ('Malabar Hill', 'Elite Residential-Green Zone', 18.9548, 72.7965, TRUE)
 ) AS loc(name, zone, lat, lon, coastal)
 ON CONFLICT (city_id, name) DO NOTHING;

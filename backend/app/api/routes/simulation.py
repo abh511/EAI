@@ -4,6 +4,7 @@ Allows testing of scenarios: "What if traffic increases 20%?"
 """
 from fastapi import APIRouter, Query, HTTPException, status
 from app.services import get_latest_reading
+from app.ml.feature_engineering import pm25_to_aqi
 from datetime import datetime
 from loguru import logger
 
@@ -319,22 +320,6 @@ def generate_summary(baseline_aqi, new_aqi, traffic_pct, industrial_pct, rainfal
         warning_text = " ".join(warnings) if warnings else "Immediate mitigation needed."
         return f"⚠️ Scenario predicts {deterioration} point AQI deterioration. {warning_text}"
     return "Minimal impact predicted from these changes."
-
-def pm25_to_aqi(pm25):
-    """Convert PM2.5 to AQI using EPA breakpoints"""
-    breakpoints = [
-        (0, 12.0, 0, 50),
-        (12.1, 35.4, 51, 100),
-        (35.5, 55.4, 101, 150),
-        (55.5, 150.4, 151, 200),
-        (150.5, 250.4, 201, 300),
-        (250.5, 350.4, 301, 400),
-        (350.5, 500.4, 401, 500),
-    ]
-    for lo_c, hi_c, lo_a, hi_a in breakpoints:
-        if lo_c <= pm25 <= hi_c:
-            return int(((hi_a - lo_a) / (hi_c - lo_c)) * (pm25 - lo_c) + lo_a)
-    return 500
 
 def aqi_category(aqi):
     if aqi <= 50: return "Good"

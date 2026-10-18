@@ -1,13 +1,14 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import useAppStore from '../store/useAppStore';
+import useAppStore, { isDemoUser } from '../store/useAppStore';
 import { supabase } from '../services/supabase';
 import toast from 'react-hot-toast';
 import Layout from '../components/Layout';
 
 export default function SettingsPage() {
   const navigate = useNavigate();
-  const { city, location } = useAppStore();
+  const { city, location, user } = useAppStore();
+  const isDemo = isDemoUser(user);
   const [currentView, setCurrentView] = useState('menu'); // 'menu', 'changePassword', 'forgotPassword'
   const [showOtpSection, setShowOtpSection] = useState(false);
   
@@ -17,10 +18,23 @@ export default function SettingsPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [resetEmail, setResetEmail] = useState('');
   
-  // Notification preferences
-  const [emailNotifications, setEmailNotifications] = useState(true);
-  const [smsNotifications, setSmsNotifications] = useState(false);
-  const [pushNotifications, setPushNotifications] = useState(true);
+  // Notification preferences, remembered in this browser
+  const savedPrefs = (() => {
+    try {
+      return JSON.parse(localStorage.getItem('ew_notification_prefs')) || {};
+    } catch {
+      return {};
+    }
+  })();
+  const [emailNotifications, setEmailNotifications] = useState(savedPrefs.email ?? true);
+  const [smsNotifications, setSmsNotifications] = useState(savedPrefs.sms ?? false);
+  const [pushNotifications, setPushNotifications] = useState(savedPrefs.push ?? true);
+
+  useEffect(() => {
+    localStorage.setItem('ew_notification_prefs', JSON.stringify({
+      email: emailNotifications, sms: smsNotifications, push: pushNotifications,
+    }));
+  }, [emailNotifications, smsNotifications, pushNotifications]);
 
   const handleChangePassword = async (e) => {
     e.preventDefault();
@@ -41,6 +55,15 @@ export default function SettingsPage() {
     }
 
     try {
+      // Confirm the current password before allowing a change
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) throw new Error('Your session has expired. Please log in again.');
+      const { error: verifyError } = await supabase.auth.signInWithPassword({
+        email: authUser.email,
+        password: currentPassword,
+      });
+      if (verifyError) throw new Error('Current password is incorrect');
+
       const { error } = await supabase.auth.updateUser({
         password: newPassword
       });
@@ -94,7 +117,14 @@ export default function SettingsPage() {
             Security
           </h3>
 
-          {currentView === 'menu' && (
+          {isDemo && (
+            <p className="text-sm p-4 rounded-lg" style={{ backgroundColor: '#f6f5f7', color: '#4b5563' }}>
+              <i className="fas fa-info-circle mr-2"></i>
+              You are using a demo account, which has no password. Sign up with your own email to manage a password.
+            </p>
+          )}
+
+          {!isDemo && currentView === 'menu' && (
             <div className="flex gap-3">
               <button
                 onClick={() => setCurrentView('changePassword')}
@@ -123,7 +153,7 @@ export default function SettingsPage() {
             </div>
           )}
 
-          {currentView === 'changePassword' && (
+          {!isDemo && currentView === 'changePassword' && (
             <div>
               <button
                 onClick={() => setCurrentView('menu')}
@@ -208,7 +238,7 @@ export default function SettingsPage() {
             </div>
           )}
 
-          {currentView === 'forgotPassword' && (
+          {!isDemo && currentView === 'forgotPassword' && (
             <div>
               <button
                 onClick={() => {

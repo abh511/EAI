@@ -36,35 +36,47 @@ export const authAPI = {
 
 // ── Dashboard ────────────────────────────────────────────────────────────────
 export const dashboardAPI = {
-  getSummary:  (city, location) => api.get(`/api/dashboard/summary?city=${city}&location=${location}`),
-  getPillars:  (city, location) => api.get(`/api/dashboard/pillars?city=${city}&location=${location}`),
-  getCityOverview: (city)       => api.get(`/api/dashboard/city-overview?city=${city}`),
-  getAIInsights: (city, location) => api.get(`/api/dashboard/ai-insights?city=${city}&location=${location}`),
+  getSummary:  (city, location) => api.get('/api/dashboard/summary', { params: { city, location } }),
+  getPillars:  (city, location) => api.get('/api/dashboard/pillars', { params: { city, location } }),
+  getCityOverview: (city)       => api.get('/api/dashboard/city-overview', { params: { city } }),
+  getAIInsights: (city, location) => api.get('/api/dashboard/ai-insights', { params: { city, location } }),
 }
 
 // ── Alerts ───────────────────────────────────────────────────────────────────
 export const alertsAPI = {
-  getActive:    (city, location) => api.get(`/api/alerts/active?city=${city}&location=${location}`),
-  getHistory:   (city)           => api.get(`/api/alerts/history?city=${city}`),
-  acknowledge:  (id)             => api.post(`/api/alerts/${id}/acknowledge`),
+  getActive:    (city, location) => api.get('/api/alerts/active', { params: { city, location } }),
+  getHistory:   (city)           => api.get('/api/alerts/history', { params: { city } }),
+  acknowledge:  (id)             => api.post(`/api/alerts/${encodeURIComponent(id)}/acknowledge`),
 }
 
 // ── Forecast ─────────────────────────────────────────────────────────────────
 export const forecastAPI = {
-  get48hr:  (city, location, pillar = 'air') => api.get(`/api/forecast/48hr/${location}?city=${city}&pillar=${pillar}`),
-  getTrend: (city, location, pillar) => api.get(`/api/forecast/trend/${pillar}?city=${city}&location=${location}`),
+  get48hr:  (city, location, pillar = 'air') => api.get(`/api/forecast/48hr/${encodeURIComponent(location)}`, { params: { city, pillar } }),
+  getTrend: (city, location, pillar) => api.get(`/api/forecast/trend/${encodeURIComponent(pillar)}`, { params: { city, location } }),
 }
 
 // ── Locations ─────────────────────────────────────────────────────────────────
 export const locationsAPI = {
   list:   ()      => api.get('/api/locations/list'),
-  byCity: (city)  => api.get(`/api/locations/${city}`),
+  byCity: (city)  => api.get(`/api/locations/${encodeURIComponent(city)}`),
 }
 
 // ── Grievance ─────────────────────────────────────────────────────────────────
 export const grievanceAPI = {
   submit:    (data) => api.post('/api/grievance/submit', data),
-  getStatus: (id)   => api.get(`/api/grievance/status/${id}`),
+  getStatus: (id)   => api.get(`/api/grievance/status/${encodeURIComponent(id)}`),
+}
+
+// ── Simulation ────────────────────────────────────────────────────────────────
+export const simulationAPI = {
+  predictImpact: (city, location, scenario) =>
+    api.post('/api/simulation/predict-impact', null, { params: { city, location, ...scenario } }),
+}
+
+// ── Machine Learning ──────────────────────────────────────────────────────────
+export const mlAPI = {
+  predictRisk:   (city, location) => api.get('/api/ml/predict-risk', { params: { city, location } }),
+  detectAnomaly: (city, location) => api.get('/api/ml/detect-anomaly', { params: { city, location } }),
 }
 
 export default api

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Train all ML models on environmental dataset
-Usage: python backend/scripts/train_all_models.py
+Usage (from the backend folder): python scripts/train_all_models.py
 """
 import sys
 from pathlib import Path
@@ -35,7 +35,8 @@ def main():
     print("\n" + "=" * 70)
     print("  TRAINING COMPLETE — SUMMARY")
     print("=" * 70)
-    print(f"✅ Risk Classifier Accuracy: {risk_metrics['accuracy']:.2%}")
+    print(f"✅ Risk Forecaster balanced accuracy: {risk_metrics['model']['balanced_accuracy']:.2%} "
+          f"(baseline {risk_metrics['baseline_last_hour']['balanced_accuracy']:.2%})")
     print(f"✅ Models saved in: backend/app/ml/models/")
     print("\nYou can now use the models via:")
     print("  - API: http://localhost:8000/api/ml/predict-risk")

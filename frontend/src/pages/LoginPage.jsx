@@ -18,7 +18,7 @@ export default function LoginPage() {
     setLoading(true);
     try {
       // Demo mode bypass
-      if (signInData.email.includes('demo') || signInData.email.includes('test')) {
+      if (signInData.email.toLowerCase().endsWith('@demo.com')) {
         setUser({
           id: 'demo-user-' + Date.now(),
           email: signInData.email,
@@ -59,7 +59,7 @@ export default function LoginPage() {
     setLoading(true);
     try {
       // Demo mode bypass
-      if (signUpData.email.includes('demo') || signUpData.email.includes('test')) {
+      if (signUpData.email.toLowerCase().endsWith('@demo.com')) {
         setUser({
           id: 'demo-user-' + Date.now(),
           email: signUpData.email,

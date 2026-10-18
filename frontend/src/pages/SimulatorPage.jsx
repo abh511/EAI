@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import useAppStore from '../store/useAppStore';
 import toast from 'react-hot-toast';
 import Layout from '../components/Layout';
+import { simulationAPI } from '../services/api';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, CartesianGrid } from 'recharts';
 
 export default function SimulatorPage() {
@@ -30,19 +31,12 @@ export default function SimulatorPage() {
     
     setLoading(true);
     try {
-      const params = new URLSearchParams({
-        city,
-        location,
-        ...scenario
-      });
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/simulation/predict-impact?${params}`, {
-        method: 'POST'
-      });
-      const data = await response.json();
-      setResults(data);
+      // Errors reject here, so an error body is never stored as results
+      const response = await simulationAPI.predictImpact(city, location, scenario);
+      setResults(response.data);
       toast.success('Simulation complete!');
     } catch (error) {
-      toast.error('Simulation failed');
+      toast.error(error.message || 'Simulation failed');
     } finally {
       setLoading(false);
     }
