@@ -1,301 +1,117 @@
-# 🌍 EnviroWatch AI - Environmental Monitoring & Decision Support System
+# 🌍 EnviroWatch AI
 
-AI-powered environmental risk detection and prediction system for Indian cities.
+Environmental monitoring and decision support for Pune and Mumbai: live-style readings across 7 environmental pillars, alerts, 48-hour forecasts, an ML risk forecaster, a what-if simulator and a construction site suitability analyzer.
 
-## 🚀 Quick Start
-
-### Prerequisites
-- Python 3.9+
-- Node.js 16+
-- npm or yarn
-
-### Backend Setup
-```bash
-cd backend
-python3 -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-pip install -r requirements.txt
-python scripts/train_all_models.py   # once: trains the ML models (~1 min)
-uvicorn app.main:app --reload
-```
-
-### Database (optional)
-The backend reads the bundled CSV by default. To serve data from Supabase instead:
-1. Run `scripts/supabase_schema.sql` in the Supabase SQL Editor (new projects only).
-2. `cd backend && python scripts/migrate_and_seed.py` adds the remaining columns and uploads the 10,000 readings.
-3. Set `DATA_SOURCE=supabase` in `backend/.env`. Grievances are then stored in the database too.
-
-If the database can't be reached, the backend falls back to the CSV.
-
-### Frontend Setup
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-### Access
-- Frontend: http://localhost:3000
-- Backend API: http://localhost:8000
-- API Docs: http://localhost:8000/docs
-
-### Demo Login
-```
-Email: demo@demo.com
-Password: anything (any password works!)
-```
+> **Data note:** the dataset is **simulated**: 10,000 readings across 20 locations (10 per city) for one day (17 Feb 2026), 70 parameters each. Model scores show the pipeline works; they are not real-world accuracy figures.
 
 ## ✨ Features
 
-### Core Monitoring (100%)
-- ✅ 7-Pillar Environmental Monitoring
-- ✅ Real-time AQI Tracking
-- ✅ Alert System
-- ✅ Grievance Reporting with Image Upload
-
-### Advanced Features (100%)
-- ✅ **Site Suitability Analyzer** (UNIQUE!)
-  - 7 construction types analysis
-  - Environmental compliance checks
-  - Factory impact prediction
-  - Alternative location recommendations
-
-- ✅ **AI Insights Engine**
-  - Smart recommendations
-  - Priority-based sorting
-  - 48-hour predictions
-
-- ✅ **What-If Simulator**
-  - Interactive scenario testing
-  - Traffic/Industrial/Wind impact
-  - Predictive modeling
-
-- ✅ **Visual Risk Mapping**
-  - Heatmap visualization
-  - Color-coded risk zones
-  - Interactive map
-
-### Data & Analytics
-- ✅ 70-parameter dataset
-- ✅ 10,000 rows of environmental data
-- ✅ Multi-criteria decision analysis
-- ✅ Population health impact modeling
+| Feature | What it does |
+|---|---|
+| **Dashboard** | AQI plus 7 pillars (air, water, noise, emissions, waste, urban heat, groundwater), AI insights and recommendations |
+| **AI Risk Forecast** | Random Forest + XGBoost ensemble predicting the average risk level for the **next 3 hours**; hazardous air is always forecast Critical |
+| **Anomaly detection** | Physical-limit and range checks plus an Isolation Forest to flag faulty sensor readings |
+| **Alerts** | Threshold breaches with severity and the responsible authority (CPCB, MPCB, PMC/BMC) |
+| **48-hour forecast** | Per-pillar forecast with breach hours and peak time |
+| **Risk map** | Current AQI risk for every location in the selected city (Leaflet + OpenStreetMap) |
+| **What-if simulator** | Impact of traffic, industry, wind, rainfall, festivals and green cover on all pillars |
+| **Site analyzer** | Suitability of 12 building types (hospital, school, factory…) with graded scoring, violations, alternatives and FSI/TDR analysis |
+| **Grievances** | Citizens report issues and get a tracking ID (stored in Supabase in database mode) |
 
 ## 🏗️ Tech Stack
 
-### Frontend
-- React 18 + Vite
-- Tailwind CSS
-- React Router
-- Recharts (visualizations)
-- Leaflet (maps)
-- Axios
+- **Frontend:** React 18, Vite, Tailwind CSS, React Router 7, Recharts, Leaflet, Axios, Zustand
+- **Backend:** FastAPI, Pandas, scikit-learn, XGBoost, Supabase (Auth + PostgreSQL)
 
-### Backend
-- FastAPI (Python)
-- Supabase (PostgreSQL)
-- JWT Authentication
-- Pandas (data processing)
-- NumPy (calculations)
+## 🚀 Getting Started
 
-## 📊 Project Status
+### Prerequisites
+- Python 3.10+
+- Node.js 20+
 
-**Completion:** 82% (9/11 features)
-**Status:** Production Ready
-**Winning Probability:** 75-80%
+### 1. Backend
+```bash
+cd backend
+python3 -m venv venv
+source venv/bin/activate          # Windows: venv\Scripts\activate
+pip install -r requirements.txt
+cp .env.example .env              # then fill in your Supabase keys
+python scripts/train_all_models.py   # once, about 1 minute
+uvicorn app.main:app --reload
+```
 
-## 🎯 Unique Selling Points
+### 2. Frontend
+```bash
+cd frontend
+npm install
+cp .env.example .env              # then fill in your Supabase URL and anon key
+npm run dev
+```
 
-1. **Site Suitability Analyzer** - No other team has this
-2. **Factory Impact Prediction** - Shows affected population
-3. **AI-Powered Recommendations** - Actionable insights
-4. **What-If Simulator** - Test scenarios before implementation
-5. **70-Parameter Dataset** - Comprehensive environmental data
+Open http://localhost:3000. API docs are at http://localhost:8000/docs.
+
+### 3. Database (optional)
+By default the backend reads the bundled CSV. To serve data from Supabase:
+1. Run `scripts/supabase_schema.sql` in the Supabase SQL Editor.
+2. `cd backend && python scripts/migrate_and_seed.py` adds the remaining columns and uploads the 10,000 readings.
+3. Set `DATA_SOURCE=supabase` in `backend/.env`.
+
+Startup then takes 10–30 seconds while readings load. If the database can't be reached, the backend falls back to the CSV.
+
+For password-reset emails to work, add `http://localhost:3000/reset-password` under **Supabase → Authentication → URL Configuration → Redirect URLs**.
+
+## 🔐 Demo Login
+
+Any email ending in **`@demo.com`** with any password, for example `demo@demo.com`. Demo accounts skip Supabase; their profile is saved in the browser. Other emails use real Supabase sign-up and login.
+
+## 🧪 Tests & Lint
+
+```bash
+cd backend && pytest            # 25 tests; always uses the CSV, never the database
+cd frontend && npm run lint
+```
 
 ## 📁 Project Structure
 
 ```
-envirowatch-ai/
 ├── backend/
 │   ├── app/
 │   │   ├── api/routes/      # API endpoints
-│   │   ├── core/            # Configuration
-│   │   ├── db/              # Database
+│   │   ├── core/            # Settings (.env)
+│   │   ├── db/              # Supabase client, env_readings loader
+│   │   ├── ml/              # Risk forecaster, anomaly detector, features
 │   │   ├── schemas/         # Pydantic models
-│   │   └── services/        # Business logic
-│   ├── data/                # Environmental dataset
-│   └── requirements.txt
-├── frontend/
-│   ├── src/
-│   │   ├── components/      # React components
-│   │   ├── pages/           # Page components
-│   │   ├── services/        # API services
-│   │   ├── store/           # State management
-│   │   └── utils/           # Utilities
-│   └── package.json
-└── README.md
+│   │   └── services/        # Data layer, alerts, forecasts
+│   ├── data/                # Simulated dataset (CSV)
+│   ├── scripts/             # Model training, DB migration + seeding
+│   └── tests/
+├── frontend/src/
+│   ├── components/          # Layout, ErrorBoundary
+│   ├── pages/               # One file per screen
+│   ├── services/            # API client, Supabase client
+│   └── store/               # Zustand state
+├── scripts/                 # SQL schema and migrations
+├── poster/                  # Project poster
+└── docs/API.md
 ```
 
-## 🔧 API Endpoints
+## 🔧 Main API Endpoints
 
-### Authentication
-- `POST /api/auth/login` - User login
-- `POST /api/auth/register` - User registration
+| Method | Endpoint | Purpose |
+|---|---|---|
+| POST | `/api/auth/login`, `/api/auth/register` | Authentication |
+| GET | `/api/locations/list` | Cities and locations |
+| GET | `/api/dashboard/summary`, `/ai-insights`, `/city-overview` | Dashboard data |
+| GET | `/api/alerts/active` | Active alerts |
+| GET | `/api/forecast/48hr/{location}` | 48-hour forecast |
+| GET | `/api/ml/predict-risk`, `/detect-anomaly`, `/model-info` | Machine learning |
+| POST | `/api/simulation/predict-impact` | What-if simulation |
+| GET | `/api/site-analysis/analyze`, `/construction-types` | Site suitability |
+| POST / GET | `/api/grievance/submit`, `/status/{tracking_id}` | Grievances |
 
-### Dashboard
-- `GET /api/dashboard/summary` - Dashboard data
-- `GET /api/dashboard/ai-insights` - AI recommendations
+Full reference: [`docs/API.md`](docs/API.md) or the live docs at `/docs`.
 
-### Site Analysis
-- `GET /api/site-analysis/construction-types` - Get construction types
-- `GET /api/site-analysis/analyze` - Analyze site suitability
+## 📚 More Documentation
 
-### Simulator
-- `POST /api/simulation/predict-impact` - Run what-if simulation
-
-### Forecast
-- `GET /api/forecast/48hr/{location}` - 48-hour forecast
-
-### Alerts
-- `GET /api/alerts/active` - Active alerts
-- `GET /api/alerts/history` - Alert history
-
-### Grievance
-- `POST /api/grievance/submit` - Submit grievance
-
-## 🧪 Testing
-
-### Test All Features
-1. Login with demo@demo.com
-2. Select city (Pune/Mumbai) and location
-3. Test Dashboard → AI Insights visible
-4. Test Site Analyzer → 7 construction types
-5. Test Simulator → Interactive sliders
-6. Test Map → Heatmap toggle
-7. Test Grievance → Image upload
-
-### API Testing
-```bash
-# Health check
-curl http://localhost:8000/api/health
-
-# Site analyzer
-curl http://localhost:8000/api/site-analysis/construction-types
-
-# AI insights
-curl "http://localhost:8000/api/dashboard/ai-insights?city=Pune&location=Hadapsar"
-```
-
-## 🎨 UI Features
-
-- Dark mode design
-- Responsive layout
-- Interactive charts
-- Real-time updates
-- Smooth animations
-- Color-coded risk levels
-
-## 📈 Dataset
-
-- **Rows:** 10,000
-- **Columns:** 70 parameters
-- **Cities:** Pune, Mumbai
-- **Locations:** 10+ per city
-- **Parameters:** AQI, pollutants, water quality, noise, traffic, industrial proximity, etc.
-
-## 🏆 Hackathon Ready
-
-### Completed
-- ✅ All core features
-- ✅ Advanced features
-- ✅ Demo authentication
-- ✅ Comprehensive dataset
-- ✅ API documentation
-- ✅ Error handling
-- ✅ Loading states
-
-### Demo Flow (10 minutes)
-1. Introduction (1 min)
-2. Dashboard + AI Insights (1 min)
-3. Site Analyzer - Hospital + Factory (3 min) ⭐
-4. Simulator (2 min)
-5. Map + Heatmap (1 min)
-6. Image Upload (1 min)
-7. Wrap up (1 min)
-
-## 🔐 Authentication
-
-Demo accounts bypass Supabase rate limits:
-- Any email starting with "demo"
-- Any email ending with "@demo.com"
-- Any password works for demo accounts
-
-Examples:
-- demo@demo.com
-- demo123@test.com
-- judge1@demo.com
-
-## 🐛 Troubleshooting
-
-### Backend not starting?
-```bash
-cd backend
-source venv/bin/activate
-pip install -r requirements.txt
-uvicorn app.main:app --reload
-```
-
-### Frontend not starting?
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-### Site Analyzer 404?
-- Restart backend
-- Check `/api/` prefix in URLs
-- Refresh browser (Ctrl+Shift+R)
-
-### Rate limit error?
-- Use demo@demo.com
-- Any password works
-
-## 📚 Documentation
-
-- `README.md` - This file
-- `PROJECT_SUMMARY.md` - Architecture overview
-- `EXPLANATION.md` - Request flow walkthrough
-- `docs/API.md` - API reference
-
-## 🤝 Contributing
-
-This is a hackathon project. For production deployment:
-1. Remove demo authentication bypass
-2. Add proper error handling
-3. Implement rate limiting
-4. Add comprehensive testing
-5. Set up CI/CD pipeline
-
-## 📄 License
-
-MIT License - See LICENSE file for details
-
-## 👥 Team
-
-EnviroWatch AI - Hackathon 2026
-
-## 🎯 Next Steps
-
-1. Test all features (10 minutes)
-2. Practice demo (3 times)
-3. Prepare presentation
-4. Win hackathon! 🏆
-
----
-
-**Status:** ✅ Production Ready
-**Completion:** 82%
-**Winning Probability:** 75-80%
-
-For detailed setup instructions, see `HACKATHON_QUICK_START.md`
+- [`PROJECT_SUMMARY.md`](PROJECT_SUMMARY.md): architecture and ML details
+- [`EXPLANATION.md`](EXPLANATION.md): how a request flows through the system

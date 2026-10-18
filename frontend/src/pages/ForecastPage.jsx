@@ -23,25 +23,25 @@ export default function ForecastPage() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  const fetchForecast = useCallback(async () => {
+    setLoading(true);
+    try {
+      const response = await forecastAPI.get48hr(city, location, selectedPillar);
+      setData(response.data);
+    } catch {
+      toast.error('Failed to load forecast data');
+    } finally {
+      setLoading(false);
+    }
+  }, [city, location, selectedPillar]);
+
   useEffect(() => {
     if (!city || !location) {
       navigate('/select-city');
       return;
     }
     fetchForecast();
-  }, [city, location, selectedPillar]);
-
-  const fetchForecast = useCallback(async () => {
-    setLoading(true);
-    try {
-      const response = await forecastAPI.get48hr(city, location, selectedPillar);
-      setData(response.data);
-    } catch (error) {
-      toast.error('Failed to load forecast data');
-    } finally {
-      setLoading(false);
-    }
-  }, [city, location, selectedPillar]);
+  }, [city, location, navigate, fetchForecast]);
 
   const chartData = useMemo(() => {
     if (!data?.points) return [];

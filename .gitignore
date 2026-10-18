@@ -1,38 +1,31 @@
+# Environment (secrets): commit only the .env.example files
+.env
+.env.*
+!.env.example
+
 # Python
 __pycache__/
 *.py[cod]
 *.so
-backend/venv/
-backend/.env
 *.egg-info/
+venv/
+.venv/
 .pytest_cache/
 .mypy_cache/
 
 # Node
-frontend/node_modules/
-frontend/dist/
-frontend/.env
-THAC/frontend/node_modules/
-THAC/backend/node_modules/
-THAC/**/node_modules/
 node_modules/
+frontend/dist/
 
-# ML
-*.h5
+# ML artifacts: regenerate with backend/scripts/train_all_models.py
 *.pkl
 *.joblib
-backend/app/ml/saved_models/
+*.h5
+backend/app/ml/models/anomaly_bounds.json
 
-# Misc
+# Editors / OS
+.vscode/
+.idea/
 .DS_Store
 *.log
 *.tmp
-.idea/
-.vscode/
-venv/
-__pycache__/
-*.pyc
-.env
-node_modules/
-.idea/
-.vscode/

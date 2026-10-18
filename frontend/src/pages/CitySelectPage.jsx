@@ -19,7 +19,7 @@ export default function CitySelectPage() {
     try {
       const response = await locationsAPI.list();
       setCities(response.data.cities);
-    } catch (error) {
+    } catch {
       toast.error('Failed to load cities');
     } finally {
       setLoading(false);

@@ -6,7 +6,8 @@ import toast from 'react-hot-toast';
 
 export default function Layout({ children, title, subtitle }) {
   const navigate = useNavigate();
-  const { city, location, clearUser } = useAppStore();
+  const { city, location, user, clearUser } = useAppStore();
+  const initials = (user?.name || user?.email || '?').trim().charAt(0).toUpperCase();
   const [darkMode, setDarkMode] = useState(false);
 
   useEffect(() => {
@@ -135,6 +136,16 @@ export default function Layout({ children, title, subtitle }) {
             />
           </div>
           <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={toggleDarkMode}
+              title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+              aria-label={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+              className="w-10 h-10 rounded-full flex items-center justify-center"
+              style={{ backgroundColor: '#f6f5f7', color: '#555' }}
+            >
+              <i className={darkMode ? 'fas fa-sun' : 'fas fa-moon'}></i>
+            </button>
             <div className="text-right">
               <h4 className="font-semibold text-sm" style={{ color: '#333' }}>
                 {location || 'Select Location'}
@@ -143,12 +154,15 @@ export default function Layout({ children, title, subtitle }) {
                 {city || 'No City Selected'}
               </small>
             </div>
-            <img
-              src="https://via.placeholder.com/40"
-              alt="Profile"
-              className="rounded-full"
-              style={{ width: '40px', height: '40px' }}
-            />
+            <button
+              type="button"
+              onClick={() => navigate('/profile')}
+              title="Profile"
+              className="rounded-full flex items-center justify-center font-bold text-white"
+              style={{ width: '40px', height: '40px', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)' }}
+            >
+              {initials}
+            </button>
           </div>
         </header>
 

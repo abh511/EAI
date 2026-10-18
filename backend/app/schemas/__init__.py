@@ -92,7 +92,7 @@ class GrievanceSubmit(BaseModel):
     location_name: str
     city: str
     pillar: str
-    description: str = Field(min_length=10)
+    description: str = Field(min_length=10, max_length=500)
     latitude: Optional[float] = None
     longitude: Optional[float] = None
 

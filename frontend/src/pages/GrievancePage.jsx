@@ -202,6 +202,7 @@ export default function GrievancePage() {
               name="description"
               value={formData.description}
               onChange={handleChange}
+              maxLength={500}
               className="w-full rounded-lg resize-y"
               style={{
                 minHeight: '160px',
@@ -228,39 +229,6 @@ export default function GrievancePage() {
             <p className="text-xs mt-2" style={{ color: '#9ca3af' }}>
               Minimum 10 characters • {formData.description.length} / 500
             </p>
-          </div>
-
-          {/* Photo Upload */}
-          <div className="mb-6">
-            <label className="text-sm font-semibold mb-2 block" style={{ color: '#111827' }}>
-              Upload Photo (Optional)
-            </label>
-            <div 
-              className="border-2 border-dashed rounded-lg p-6 text-center transition-all cursor-pointer"
-              style={{ borderColor: '#d1d5db', backgroundColor: '#f9fafb' }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = '#10b981';
-                e.currentTarget.style.backgroundColor = 'rgba(16, 185, 129, 0.02)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = '#d1d5db';
-                e.currentTarget.style.backgroundColor = '#f9fafb';
-              }}
-            >
-              <input
-                type="file"
-                accept="image/*"
-                className="hidden"
-                id="image-upload"
-              />
-              <label htmlFor="image-upload" className="cursor-pointer">
-                <div className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-2" style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)' }}>
-                  <i className="fas fa-camera text-xl" style={{ color: '#10b981' }}></i>
-                </div>
-                <p className="text-sm mb-1" style={{ color: '#4b5563' }}>Click to upload an image</p>
-                <p className="text-xs" style={{ color: '#9ca3af' }}>PNG, JPG up to 5MB</p>
-              </label>
-            </div>
           </div>
 
           {/* Submit Button */}

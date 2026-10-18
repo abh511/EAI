@@ -1,12 +1,10 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import useAppStore, { isDemoUser } from '../store/useAppStore';
 import { supabase } from '../services/supabase';
 import toast from 'react-hot-toast';
 import Layout from '../components/Layout';
 
 export default function SettingsPage() {
-  const navigate = useNavigate();
   const { city, location, user } = useAppStore();
   const isDemo = isDemoUser(user);
   const [currentView, setCurrentView] = useState('menu'); // 'menu', 'changePassword', 'forgotPassword'

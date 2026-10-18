@@ -1,17 +1,14 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import useAppStore, { isDemoUser } from '../store/useAppStore';
 import { supabase } from '../services/supabase';
 import toast from 'react-hot-toast';
 import Layout from '../components/Layout';
 
 export default function ProfilePage() {
-  const navigate = useNavigate();
   const { city, location, user: sessionUser } = useAppStore();
   const isDemo = isDemoUser(sessionUser);
   const demoKey = `ew_demo_profile:${sessionUser?.email}`;
   const [loading, setLoading] = useState(false);
-  const [user, setUser] = useState(null);
   
   // Form states
   const [fullName, setFullName] = useState('');
@@ -22,8 +19,9 @@ export default function ProfilePage() {
   const [photoURL, setPhotoURL] = useState(null);
 
   useEffect(() => {
+    // Load once on mount; the signed-in user doesn't change while this page is open
     loadUserProfile();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Demo accounts have no Supabase user, so their profile lives in this browser
   const readDemoProfile = () => {
@@ -57,7 +55,6 @@ export default function ProfilePage() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        setUser(user);
         setEmail(user.email);
         setFullName(user.user_metadata?.full_name || '');
         setUsername(user.user_metadata?.username || '');

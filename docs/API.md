@@ -357,13 +357,13 @@ Get 48-hour forecast for a location and pillar.
   "threshold": 150,
   "points": [
     {
-      "time": "2026-02-17 14:00",
+      "time": "2026-02-17T14:00",
       "value": 156.2,
       "will_breach": true,
       "confidence": 0.92
     }
   ],
-  "peak_risk_time": "2026-02-18 09:00",
+  "peak_risk_time": "2026-02-18T09:00",
   "summary": "⚠️ AQI is predicted to breach the 150 AQI limit for 18 hours in the next 48 hours."
 }
 ```
@@ -378,7 +378,7 @@ curl "http://localhost:8000/api/forecast/48hr/Viman%20Nagar?city=Pune&pillar=air
 ## Grievance
 
 ### POST /api/grievance/submit
-Submit a citizen grievance.
+Submit a citizen grievance. With `DATA_SOURCE=supabase` it is stored in the `grievances` table; otherwise it is only logged (`"stored": false`). `description` must be 10–500 characters.
 
 **Request Body:**
 ```json
@@ -398,7 +398,8 @@ Submit a citizen grievance.
   "id": "uuid-string",
   "status": "submitted",
   "message": "Grievance submitted successfully",
-  "tracking_id": "GRV-2026-001234"
+  "tracking_id": "GRV-2026-A1B2C3",
+  "stored": true
 }
 ```
 
@@ -412,7 +413,7 @@ curl -X POST http://localhost:8000/api/grievance/submit \
 ---
 
 ### GET /api/grievance/status/{tracking_id}
-Get grievance status by tracking ID.
+Get grievance status by tracking ID. Requires `DATA_SOURCE=supabase` (returns 501 otherwise); 404 if the ID is unknown.
 
 **Path Parameters:**
 - `tracking_id` (string): Tracking ID
@@ -420,17 +421,85 @@ Get grievance status by tracking ID.
 **Response (200):**
 ```json
 {
-  "tracking_id": "GRV-2026-001234",
-  "status": "under_review",
-  "submitted_at": "2026-02-17T14:30:00",
-  "updated_at": "2026-02-17T15:00:00"
+  "tracking_id": "GRV-2026-A1B2C3",
+  "status": "submitted",
+  "pillar": "air",
+  "submitted_at": "2026-02-17T14:30:00+00:00"
 }
 ```
 
 **Example:**
 ```bash
-curl http://localhost:8000/api/grievance/status/GRV-2026-001234
+curl http://localhost:8000/api/grievance/status/GRV-2026-A1B2C3
 ```
+
+---
+
+## Machine Learning
+
+### GET /api/ml/predict-risk
+Forecast the average risk level over the next 3 hours for a location (Random Forest + XGBoost ensemble). Also returns the current risk from the AQI formula. If current AQI is above 300 the forecast is forced to Critical (`safety_override`). Returns 503 if the models are not trained.
+
+**Query Parameters:** `city`, `location` (required)
+
+**Response (200):**
+```json
+{
+  "risk_level": "Medium",
+  "risk_score": 1,
+  "confidence": 0.94,
+  "probabilities": {"Low": 0.0, "Medium": 0.94, "High": 0.06, "Critical": 0.0},
+  "model": "Random Forest + XGBoost Ensemble",
+  "n_features_used": 12,
+  "horizon_hours": 3,
+  "current_aqi": 206,
+  "current_risk_level": "High",
+  "safety_override": false
+}
+```
+
+### GET /api/ml/detect-anomaly
+Check whether the current reading is anomalous: physical-limit and range rules, then an Isolation Forest.
+
+**Response (200):**
+```json
+{
+  "is_anomaly": false,
+  "anomaly_score": -0.41,
+  "confidence": 0.41,
+  "message": "✅ Reading within normal patterns.",
+  "reasons": [],
+  "detected_by": []
+}
+```
+
+### GET /api/ml/model-info
+Training metrics: held-out accuracy, balanced accuracy and macro F1 versus a "last hour" baseline, and top features.
+
+---
+
+## Simulation
+
+### POST /api/simulation/predict-impact
+What-if scenario. All query parameters are percentages from -50 to 100: `traffic_change_pct`, `industrial_change_pct`, `wind_speed_change_pct`, `rainfall_change_pct`, `festival_activity_pct`, `green_cover_change_pct`, plus required `city` and `location`. Returns baseline vs predicted values for all 7 pillars and the new AQI.
+
+```bash
+curl -X POST "http://localhost:8000/api/simulation/predict-impact?city=Pune&location=Baner&traffic_change_pct=20"
+```
+
+---
+
+## Site Analysis
+
+### GET /api/site-analysis/construction-types
+List the 12 building types with their rationale.
+
+### GET /api/site-analysis/analyze
+Suitability (0–100) of a location for a building type. Each check earns full credit within its limit and partial credit just beyond it; 60 or more passes. Factories and parking in residential zones are capped below the pass mark.
+
+**Query Parameters:** `city`, `location`, `construction_type` (one of `hospital`, `school`, `factory`, `hotel`, `residential`, `it_park`, `old_age_home`, `gym`, `street_food`, `market`, `sports_complex`, `parking`)
+
+Returns `suitability_score`, `should_build`, `environmental_checks`, `violations`, `recommendations`, `alternative_locations`, `predicted_impact` (factory/parking) and `buildable_area_analysis` (FSI/TDR).
 
 ---
 
@@ -443,7 +512,7 @@ Check API health status.
 ```json
 {
   "status": "healthy",
-  "timestamp": "2026-02-17T14:30:00"
+  "service": "EnviroWatch AI"
 }
 ```
 

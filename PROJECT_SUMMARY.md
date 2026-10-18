@@ -138,7 +138,7 @@ The simulation engine (`simulation.py`) does NOT use ML — it uses hand-crafted
 | `/api/dashboard` | `dashboard.py` | Pillar cards, AI insights, city overview |
 | `/api/alerts` | `alerts.py` | Active alerts, history |
 | `/api/forecast` | `forecast.py` | 48-hour ARIMA-style predictions |
-| `/api/grievance` | `grievance.py` | Submit complaints with image upload |
+| `/api/grievance` | `grievance.py` | Submit complaints, look up status by tracking ID |
 | `/api/simulation` | `simulation.py` | What-if scenario engine |
 | `/api/site-analysis` | `site_analysis.py` | Construction suitability + FSI/TDR |
 | `/api/ml` | `ml_predictions.py` | Direct ML model endpoints |
@@ -176,7 +176,7 @@ The simulation engine (`simulation.py`) does NOT use ML — it uses hand-crafted
 | ForecastPage | `/forecast` | 48hr chart per pillar |
 | SimulatorPage | `/simulator` | What-if sliders |
 | SiteAnalyzerPage | `/site-analyzer` | Construction suitability |
-| MapPage | `/map` | Leaflet map + heatmap |
+| MapPage | `/map` | Leaflet map of current AQI risk per location |
 | GrievancePage | `/grievance` | Submit complaint |
 | ProfilePage | `/profile` | User profile |
 | SettingsPage | `/settings` | App settings |

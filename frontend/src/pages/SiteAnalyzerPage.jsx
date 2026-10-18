@@ -29,7 +29,7 @@ export default function SiteAnalyzerPage() {
       if (res.data.types.length > 0) {
         setSelectedType(res.data.types[0].id);
       }
-    } catch (err) {
+    } catch {
       toast.error('Failed to load construction types');
     }
   };

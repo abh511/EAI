@@ -250,10 +250,10 @@ Intentionally rule-based for speed and interpretability.
 ## STEP 10 — Grievance
 
 ### `frontend/src/pages/GrievancePage.jsx`
-User fills a form + optional image upload → calls `POST /api/grievance/submit`.
+User fills in the form → calls `POST /api/grievance/submit`.
 
 ### `backend/app/api/routes/grievance.py`
-This is the ONE feature that actually writes to Supabase (the real database).
+With `DATA_SOURCE=supabase`, the grievance is written to the `grievances` table with a tracking ID.
 All other features read from the CSV. Grievances are stored permanently in the
 `grievances` table in Supabase with Row Level Security — users can only see their own.
 

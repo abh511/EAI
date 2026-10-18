@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { alertsAPI } from '../services/api';
 import useAppStore from '../store/useAppStore';
@@ -12,25 +12,25 @@ export default function AlertsPage() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
 
+  const fetchAlerts = useCallback(async () => {
+    setLoading(true);
+    try {
+      const response = await alertsAPI.getActive(city, location);
+      setAlerts(response.data.alerts || []);
+    } catch {
+      toast.error('Failed to load alerts');
+    } finally {
+      setLoading(false);
+    }
+  }, [city, location]);
+
   useEffect(() => {
     if (!city || !location) {
       navigate('/select-city');
       return;
     }
     fetchAlerts();
-  }, [city, location, navigate]);
-
-  const fetchAlerts = async () => {
-    setLoading(true);
-    try {
-      const response = await alertsAPI.getActive(city, location);
-      setAlerts(response.data.alerts || []);
-    } catch (error) {
-      toast.error('Failed to load alerts');
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [city, location, navigate, fetchAlerts]);
 
   const handleAcknowledge = async (alertId) => {
     try {
@@ -38,7 +38,7 @@ export default function AlertsPage() {
       toast.success('Alert acknowledged');
       // Update in place: refetching samples a new reading and would bring the alert back
       setAlerts((prev) => prev.map((a) => (a.id === alertId ? { ...a, status: 'acknowledged' } : a)));
-    } catch (error) {
+    } catch {
       toast.error('Failed to acknowledge alert');
     }
   };

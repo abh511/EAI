@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { dashboardAPI, mlAPI } from '../services/api';
 import useAppStore from '../store/useAppStore';
@@ -22,28 +22,13 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [insights, setInsights] = useState(null);
   const [mlPrediction, setMlPrediction] = useState(null);
-  const [mlLoading, setMlLoading] = useState(false);
-
-  useEffect(() => {
-    if (!city || !location) {
-      navigate('/select-city');
-      return;
-    }
-    
-    // Fetch all data in parallel
-    Promise.all([
-      fetchData(),
-      fetchInsights(),
-      fetchMLPrediction()
-    ]);
-  }, [city, location]);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       const response = await dashboardAPI.getSummary(city, location);
       setData(response.data);
-    } catch (error) {
+    } catch {
       toast.error('Failed to load dashboard data');
     } finally {
       setLoading(false);
@@ -60,16 +45,22 @@ export default function DashboardPage() {
   }, [city, location]);
 
   const fetchMLPrediction = useCallback(async () => {
-    setMlLoading(true);
     try {
       const response = await mlAPI.predictRisk(city, location);
       setMlPrediction(response.data);
     } catch (error) {
       console.error('Failed to load ML prediction:', error);
-    } finally {
-      setMlLoading(false);
     }
   }, [city, location]);
+
+  useEffect(() => {
+    if (!city || !location) {
+      navigate('/select-city');
+      return;
+    }
+    // Fetch all data in parallel
+    Promise.all([fetchData(), fetchInsights(), fetchMLPrediction()]);
+  }, [city, location, navigate, fetchData, fetchInsights, fetchMLPrediction]);
 
   const getStatusColor = useCallback((status) => {
     const colors = {
